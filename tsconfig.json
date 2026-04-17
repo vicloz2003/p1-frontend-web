@@ -9,6 +9,7 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
     "isolatedModules": true,
     "experimentalDecorators": true,
     "importHelpers": true,

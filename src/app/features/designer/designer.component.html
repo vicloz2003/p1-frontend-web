@@ -1,0 +1,10 @@
+<mat-toolbar color="primary">
+  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+    <mat-label>Nombre de la política</mat-label>
+    <input matInput [value]="policyName()" (input)="onNameInput($event)" />
+  </mat-form-field>
+  <span style="flex: 1"></span>
+  <button mat-raised-button (click)="savePolicy()">Guardar Política</button>
+</mat-toolbar>
+
+<div #canvas class="canvas-container"></div>

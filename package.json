@@ -22,6 +22,7 @@
     "@angular/router": "^21.2.0",
     "@ngx-formly/core": "^7.1.0",
     "@ngx-formly/material": "^7.1.0",
+    "bpmn-js": "^18.14.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0"
   },
