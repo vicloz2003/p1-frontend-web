@@ -14,7 +14,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import BpmnModeler, { BpmnElement, ElementRegistry } from 'bpmn-js/lib/Modeler';
-import { ActivityNode, ControlFlow } from '../../core/models/domain';
+import { ActivityNode, ActivityPartition, ControlFlow } from '../../core/models/domain';
 import { NodeType } from '../../core/models/enums';
 import { CreatePolicyRequest } from '../../core/models/requests';
 import { PolicyService } from '../../core/services/policy.service';
@@ -100,16 +100,37 @@ export class DesignerComponent implements OnDestroy {
     const elementRegistry: ElementRegistry = this.modeler.get('elementRegistry');
     const elements: BpmnElement[] = elementRegistry.getAll();
 
+    const lanes = elements.filter(el => el.businessObject.$type === 'bpmn:Lane');
+
+    const partitions: ActivityPartition[] = lanes.map(lane => ({
+      id: lane.id,
+      label: lane.businessObject.name ?? 'Carril sin nombre',
+      departmentId: '',
+    }));
+
     const nodes: ActivityNode[] = elements
       .filter(el => SHAPE_TYPES.has(el.businessObject.$type))
-      .map(el => ({
-        id: el.id,
-        label: el.businessObject.name ?? '',
-        partitionId: '',
-        type: mapNodeType(el),
-        formSchema: {},
-        metadata: {},
-      }));
+      .map(el => {
+        let laneId = '';
+        if (el.parent?.businessObject?.$type === 'bpmn:Lane') {
+          laneId = el.parent.id;
+        } else {
+          const matchingLane = lanes.find(
+            lane => lane.businessObject.flowNodeRef?.some(ref => ref.id === el.id)
+          );
+          if (matchingLane) {
+            laneId = matchingLane.id;
+          }
+        }
+        return {
+          id: el.id,
+          label: el.businessObject.name ?? '',
+          partitionId: laneId,
+          type: mapNodeType(el),
+          formSchema: {},
+          metadata: {},
+        };
+      });
 
     const flows: ControlFlow[] = elements
       .filter(el => el.businessObject.$type === 'bpmn:SequenceFlow')
@@ -122,7 +143,7 @@ export class DesignerComponent implements OnDestroy {
 
     const request: CreatePolicyRequest = {
       name: this.policyName(),
-      partitions: [],
+      partitions,
       nodes,
       flows,
     };
