@@ -8,30 +8,19 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import BpmnModeler, { BpmnElement, ElementRegistry } from 'bpmn-js/lib/Modeler';
-import { ActivityNode, ActivityPartition, ControlFlow } from '../../core/models/domain';
+import { ActivityNode, ActivityPartition, ControlFlow, Department } from '../../core/models/domain';
 import { NodeType } from '../../core/models/enums';
 import { CreatePolicyRequest } from '../../core/models/requests';
 import { PolicyService } from '../../core/services/policy.service';
-
-const EMPTY_BPMN_XML = `<?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
-  <bpmn:process id="Process_1" isExecutable="false">
-    <bpmn:startEvent id="StartEvent_1" />
-  </bpmn:process>
-  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
-    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
-      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
-        <dc:Bounds x="156" y="81" width="36" height="36" />
-      </bpmndi:BPMNShape>
-    </bpmndi:BPMNPlane>
-  </bpmndi:BPMNDiagram>
-</bpmn:definitions>`;
+import { INITIAL_BPMN_TEMPLATE } from './initial-template';
+import { LanePanelComponent } from './lane-panel/lane-panel.component';
 
 const SHAPE_TYPES = new Set([
   'bpmn:StartEvent',
@@ -52,9 +41,9 @@ function mapNodeType(el: BpmnElement): NodeType {
     case 'bpmn:ServiceTask':
       return 'ACTION';
     case 'bpmn:ExclusiveGateway':
-      return (el.outgoing?.length ?? 0) > 1 ? 'DECISION' : 'MERGE';
+      return (el.incoming?.length ?? 0) > 1 ? 'MERGE' : 'DECISION';
     case 'bpmn:ParallelGateway':
-      return (el.outgoing?.length ?? 0) > 1 ? 'FORK' : 'JOIN';
+      return (el.incoming?.length ?? 0) > 1 ? 'JOIN' : 'FORK';
     case 'bpmn:EndEvent':
     default:
       return 'ACTIVITY_FINAL';
@@ -66,13 +55,17 @@ function mapNodeType(el: BpmnElement): NodeType {
   templateUrl: './designer.component.html',
   styleUrl: './designer.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatToolbarModule, MatButtonModule, MatFormFieldModule, MatInputModule],
+  imports: [MatToolbarModule, MatButtonModule, MatFormFieldModule, MatInputModule, LanePanelComponent],
 })
 export class DesignerComponent implements OnDestroy {
   readonly canvas = viewChild<ElementRef<HTMLElement>>('canvas');
   readonly policyName = signal('Nueva Política');
+  readonly departments = signal<Department[]>([]);
+  readonly lanes = signal<ActivityPartition[]>([]);
 
   private modeler!: BpmnModeler;
+  private readonly laneToDepart = new Map<string, string>();
+  private readonly http = inject(HttpClient);
   private readonly policyService = inject(PolicyService);
   private readonly snackBar = inject(MatSnackBar);
 
@@ -82,16 +75,39 @@ export class DesignerComponent implements OnDestroy {
       if (container) {
         this.modeler = new BpmnModeler({ container });
         try {
-          await this.modeler.importXML(EMPTY_BPMN_XML);
+          await this.modeler.importXML(INITIAL_BPMN_TEMPLATE);
+          this.refreshLanes();
         } catch (err) {
           console.error('Error inicializando el lienzo BPMN:', err);
         }
+        this.modeler.on('commandStack.changed', () => this.refreshLanes());
+        this.http
+          .get<Department[]>('http://localhost:3000/api/v1/departments')
+          .subscribe(data => this.departments.set(data));
       }
     });
   }
 
+  private refreshLanes(): void {
+    const registry: ElementRegistry = this.modeler.get('elementRegistry');
+    const laneElements = registry.getAll().filter(
+      el => el.businessObject.$type === 'bpmn:Lane'
+    );
+    this.lanes.set(
+      laneElements.map(el => ({
+        id: el.id,
+        label: el.businessObject.name ?? 'Carril sin nombre',
+        departmentId: this.laneToDepart.get(el.id) ?? '',
+      }))
+    );
+  }
+
   onNameInput(event: Event): void {
     this.policyName.set((event.target as HTMLInputElement).value);
+  }
+
+  onDepartmentAssigned(event: { laneId: string; departmentId: string }): void {
+    this.laneToDepart.set(event.laneId, event.departmentId);
   }
 
   savePolicy(): void {
@@ -100,9 +116,9 @@ export class DesignerComponent implements OnDestroy {
     const elementRegistry: ElementRegistry = this.modeler.get('elementRegistry');
     const elements: BpmnElement[] = elementRegistry.getAll();
 
-    const lanes = elements.filter(el => el.businessObject.$type === 'bpmn:Lane');
+    const lanedElements = elements.filter(el => el.businessObject.$type === 'bpmn:Lane');
 
-    const partitions: ActivityPartition[] = lanes.map(lane => ({
+    const partitions: ActivityPartition[] = lanedElements.map(lane => ({
       id: lane.id,
       label: lane.businessObject.name ?? 'Carril sin nombre',
       departmentId: '',
@@ -115,7 +131,7 @@ export class DesignerComponent implements OnDestroy {
         if (el.parent?.businessObject?.$type === 'bpmn:Lane') {
           laneId = el.parent.id;
         } else {
-          const matchingLane = lanes.find(
+          const matchingLane = lanedElements.find(
             lane => lane.businessObject.flowNodeRef?.some(ref => ref.id === el.id)
           );
           if (matchingLane) {
@@ -141,9 +157,24 @@ export class DesignerComponent implements OnDestroy {
         guardCondition: el.businessObject.conditionExpression?.body ?? null,
       }));
 
+    const enrichedPartitions = partitions.map(p => ({
+      ...p,
+      departmentId: this.laneToDepart.get(p.id) ?? '',
+    }));
+
+    const unassigned = enrichedPartitions.filter(p => p.departmentId === '');
+    if (unassigned.length > 0) {
+      this.snackBar.open(
+        'Asigna un departamento a todos los carriles antes de guardar',
+        'OK',
+        { duration: 4000 }
+      );
+      return;
+    }
+
     const request: CreatePolicyRequest = {
       name: this.policyName(),
-      partitions,
+      partitions: enrichedPartitions,
       nodes,
       flows,
     };

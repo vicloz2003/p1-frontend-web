@@ -31,6 +31,7 @@ declare module 'bpmn-js/lib/Modeler' {
     saveXML(options?: { format?: boolean }): Promise<BpmnSaveXMLResult>;
     importXML(xml: string): Promise<{ warnings: string[] }>;
     get(serviceName: 'elementRegistry'): ElementRegistry;
+    on(event: string, callback: (...args: unknown[]) => void): void;
     destroy(): void;
   }
 }

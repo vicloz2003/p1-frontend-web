@@ -7,4 +7,11 @@
   <button mat-raised-button (click)="savePolicy()">Guardar Política</button>
 </mat-toolbar>
 
-<div #canvas class="canvas-container"></div>
+<div class="designer-body">
+  <div #canvas class="canvas-container"></div>
+  <app-lane-panel
+    [lanes]="lanes()"
+    [departments]="departments()"
+    (departmentAssigned)="onDepartmentAssigned($event)"
+  />
+</div>
