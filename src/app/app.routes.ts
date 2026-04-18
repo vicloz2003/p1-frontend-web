@@ -35,6 +35,14 @@ export const routes: Routes = [
     data: { role: 'ADMIN_DESIGNER' },
   },
   {
+    path: 'designer/:id',
+    loadComponent: () =>
+      import('./features/designer/designer.component')
+        .then(m => m.DesignerComponent),
+    canActivate: [authGuard, roleGuard],
+    data: { role: 'ADMIN_DESIGNER' },
+  },
+  {
     path: 'policies',
     loadComponent: () =>
       import('./features/policies/policies.component').then(m => m.PoliciesComponent),
@@ -49,12 +57,28 @@ export const routes: Routes = [
     data: { role: 'ADMIN_DESIGNER' },
   },
   {
+    path: 'processes',
+    loadComponent: () =>
+      import('./features/processes/process-list.component')
+        .then(m => m.ProcessListComponent),
+    canActivate: [authGuard, roleGuard],
+    data: { role: 'ADMIN_DESIGNER' },
+  },
+  {
     path: 'processes/:id',
     loadComponent: () =>
       import('./features/processes/process-status.component').then(
         m => m.ProcessStatusComponent
       ),
     canActivate: [authGuard],
+  },
+  {
+    path: 'departments',
+    loadComponent: () =>
+      import('./features/departments/departments.component')
+        .then(m => m.DepartmentsComponent),
+    canActivate: [authGuard, roleGuard],
+    data: { role: 'ADMIN_DESIGNER' },
   },
   { path: '**', redirectTo: 'login' },
 ];
