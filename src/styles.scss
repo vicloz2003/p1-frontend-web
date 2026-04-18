@@ -1,3 +1,9 @@
 @import '@angular/material/prebuilt-themes/azure-blue.css';
 @import "bpmn-js/dist/assets/diagram-js.css";
 @import "bpmn-js/dist/assets/bpmn-font/css/bpmn.css";
+
+.has-form .djs-visual rect {
+  stroke: #1976d2 !important;
+  stroke-width: 2.5px !important;
+}
+

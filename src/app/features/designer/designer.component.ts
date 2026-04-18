@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { MatButtonModule } from '@angular/material/button';
+import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -19,8 +20,10 @@ import { ActivityNode, ActivityPartition, ControlFlow, Department } from '../../
 import { NodeType } from '../../core/models/enums';
 import { CreatePolicyRequest } from '../../core/models/requests';
 import { PolicyService } from '../../core/services/policy.service';
+import { FormEditorDialogComponent } from './form-editor-dialog/form-editor-dialog.component';
 import { INITIAL_BPMN_TEMPLATE } from './initial-template';
 import { LanePanelComponent } from './lane-panel/lane-panel.component';
+import { FormSchema } from './models/form-schema.models';
 
 const SHAPE_TYPES = new Set([
   'bpmn:StartEvent',
@@ -65,9 +68,11 @@ export class DesignerComponent implements OnDestroy {
 
   private modeler!: BpmnModeler;
   private readonly laneToDepart = new Map<string, string>();
+  private readonly nodeFormSchemas = new Map<string, FormSchema>();
   private readonly http = inject(HttpClient);
   private readonly policyService = inject(PolicyService);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly dialog = inject(MatDialog);
 
   constructor() {
     afterNextRender(async () => {
@@ -81,9 +86,51 @@ export class DesignerComponent implements OnDestroy {
           console.error('Error inicializando el lienzo BPMN:', err);
         }
         this.modeler.on('commandStack.changed', () => this.refreshLanes());
+        this.modeler.on('element.dblclick', (event: { element: BpmnElement }) => {
+          const el = event.element;
+          const type = el.businessObject.$type;
+          const isAction =
+            type === 'bpmn:Task' ||
+            type === 'bpmn:UserTask' ||
+            type === 'bpmn:ServiceTask';
+          if (!isAction) return;
+
+          const existingSchema = this.nodeFormSchemas.get(el.id) ?? { fields: [] };
+
+          this.dialog
+            .open(FormEditorDialogComponent, {
+              data: {
+                nodeId: el.id,
+                nodeLabel: el.businessObject.name || 'Nodo sin nombre',
+                schema: existingSchema,
+              },
+              width: '680px',
+              maxHeight: '80vh',
+            })
+            .afterClosed()
+            .subscribe((result: FormSchema | null) => {
+              if (result) {
+                this.nodeFormSchemas.set(el.id, result);
+                this.refreshNodeMarkers();
+              }
+            });
+        });
         this.http
           .get<Department[]>('http://localhost:3000/api/v1/departments')
           .subscribe(data => this.departments.set(data));
+      }
+    });
+  }
+
+  private refreshNodeMarkers(): void {
+    const registry: ElementRegistry = this.modeler.get('elementRegistry');
+    const canvas = this.modeler.get('canvas');
+    this.nodeFormSchemas.forEach((schema, nodeId) => {
+      if (schema.fields.length > 0) {
+        const el = registry.get(nodeId);
+        if (el) {
+          canvas.addMarker(nodeId, 'has-form');
+        }
       }
     });
   }
@@ -143,7 +190,7 @@ export class DesignerComponent implements OnDestroy {
           label: el.businessObject.name ?? '',
           partitionId: laneId,
           type: mapNodeType(el),
-          formSchema: {},
+          formSchema: (this.nodeFormSchemas.get(el.id) ?? { fields: [] }) as unknown as Record<string, unknown>,
           metadata: {},
         };
       });
