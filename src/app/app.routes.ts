@@ -80,5 +80,29 @@ export const routes: Routes = [
     canActivate: [authGuard, roleGuard],
     data: { role: 'ADMIN_DESIGNER' },
   },
+  {
+    path: 'users',
+    loadComponent: () =>
+      import('./features/users/users.component')
+        .then(m => m.UsersComponent),
+    canActivate: [authGuard, roleGuard],
+    data: { role: 'ADMIN_DESIGNER' },
+  },
+  {
+    path: 'start-process',
+    loadComponent: () =>
+      import('./features/processes/start-process.component')
+        .then(m => m.StartProcessComponent),
+    canActivate: [authGuard, roleGuard],
+    data: { role: 'EMPLOYEE' },
+  },
+  {
+    path: 'task/:id',
+    loadComponent: () =>
+      import('./features/dashboard/task-complete/task-complete.component')
+        .then(m => m.TaskCompleteComponent),
+    canActivate: [authGuard, roleGuard],
+    data: { role: 'EMPLOYEE' },
+  },
   { path: '**', redirectTo: 'login' },
 ];

@@ -1,17 +1,39 @@
 <mat-toolbar color="primary">
-  <span>iBPMS</span>
+  <span style="font-weight:700; font-size:1.2rem;">iBPMS</span>
+
+  @if (role() === 'EMPLOYEE') {
+    <a mat-button routerLink="/dashboard">
+      <mat-icon>dashboard</mat-icon> Dashboard
+    </a>
+    <a mat-button routerLink="/start-process">
+      <mat-icon>add_circle</mat-icon> Iniciar Trámite
+    </a>
+  }
+
+  @if (role() === 'ADMIN_DESIGNER') {
+    <a mat-button routerLink="/policies">
+      <mat-icon>policy</mat-icon> Políticas
+    </a>
+    <a mat-button routerLink="/designer">
+      <mat-icon>edit</mat-icon> Diseñador
+    </a>
+    <a mat-button routerLink="/departments">
+      <mat-icon>business</mat-icon> Departamentos
+    </a>
+    <a mat-button routerLink="/users">
+      <mat-icon>group</mat-icon> Usuarios
+    </a>
+    <a mat-button routerLink="/analytics">
+      <mat-icon>bar_chart</mat-icon> Analítica
+    </a>
+  }
+
+  <span style="flex: 1 1 auto"></span>
 
   @if (role()) {
-    @if (role() === 'EMPLOYEE') {
-      <a mat-button routerLink="/dashboard">Dashboard</a>
-    }
-    @if (role() === 'ADMIN_DESIGNER') {
-      <a mat-button routerLink="/policies">Políticas</a>
-      <a mat-button routerLink="/designer">Diseñador</a>
-      <a mat-button routerLink="/analytics">Analítica</a>
-    }
-    <span style="flex: 1 1 auto"></span>
-    <button mat-button (click)="logout()">Cerrar sesión</button>
+    <button mat-button (click)="logout()">
+      <mat-icon>logout</mat-icon> Cerrar sesión
+    </button>
   }
 </mat-toolbar>
 

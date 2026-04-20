@@ -72,6 +72,10 @@ export class AuthService {
     return localStorage.getItem(ACCESS_TOKEN_KEY);
   }
 
+  getAccessToken(): string {
+    return localStorage.getItem(ACCESS_TOKEN_KEY) ?? '';
+  }
+
   isAuthenticated(): boolean {
     const token = this.getToken();
     if (!token) return false;

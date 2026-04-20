@@ -66,6 +66,7 @@ export interface TaskNotificationDto {
 export interface TaskResponse {
   id: string;
   nodeId: string;
+  nodeLabel: string;
   processInstanceId: string;
   assignedDepartmentId: string;
   status: TaskStatus;
