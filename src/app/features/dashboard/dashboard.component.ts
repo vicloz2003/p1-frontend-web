@@ -19,6 +19,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatBadgeModule } from '@angular/material/badge';
 import { AuthService } from '../../core/auth/auth.service';
 import { WebSocketService } from '../../core/websocket/websocket.service';
 import { TaskResponse, TaskNotificationDto } from '../../core/models/responses';
@@ -34,6 +35,7 @@ import { TaskResponse, TaskNotificationDto } from '../../core/models/responses';
     MatSnackBarModule,
     MatDialogModule,
     MatTooltipModule,
+    MatBadgeModule,
     DatePipe,
     SlicePipe,
   ],
@@ -50,8 +52,11 @@ import { TaskResponse, TaskNotificationDto } from '../../core/models/responses';
           {{ auth.currentUser()?.role }}
         </p>
       </div>
-      <button mat-icon-button (click)="loadTasks()"
-              [disabled]="loading()" matTooltip="Actualizar">
+      <button mat-icon-button (click)="onRefresh()"
+              [disabled]="loading()"
+              matTooltip="Actualizar"
+              [matBadge]="hasNewTask() ? '!' : null"
+              matBadgeColor="warn">
         <mat-icon>refresh</mat-icon>
       </button>
     </div>
@@ -61,7 +66,7 @@ import { TaskResponse, TaskNotificationDto } from '../../core/models/responses';
         style="margin: 8px 24px 0;" />
     }
 
-    <div style="display:grid; grid-template-columns:1fr 1fr;
+    <div style="display:grid; grid-template-columns:1fr 1fr 1fr;
                 gap:24px; padding:24px;">
 
       <!-- COLUMNA IZQUIERDA — Tareas PENDING -->
@@ -81,7 +86,8 @@ import { TaskResponse, TaskNotificationDto } from '../../core/models/responses';
 
         @for (task of pendingTasks(); track task.id) {
           <mat-card appearance="outlined"
-                    style="margin-bottom:12px;">
+                    style="margin-bottom:12px;
+                           border-left:4px solid #f44336;">
             <mat-card-header>
               <mat-card-title style="font-size:1rem;">
                 {{ task.nodeLabel || task.nodeId }}
@@ -89,6 +95,9 @@ import { TaskResponse, TaskNotificationDto } from '../../core/models/responses';
               <mat-card-subtitle>
                 Trámite: {{ task.processInstanceId | slice:0:8 }}…
               </mat-card-subtitle>
+              <mat-chip-set>
+                <mat-chip color="warn">Pendiente</mat-chip>
+              </mat-chip-set>
             </mat-card-header>
             <mat-card-content style="padding-top:8px;">
               <p style="margin:0; font-size:0.85rem;
@@ -142,7 +151,7 @@ import { TaskResponse, TaskNotificationDto } from '../../core/models/responses';
         @for (task of inProgressTasks(); track task.id) {
           <mat-card appearance="outlined"
             style="margin-bottom:12px;
-                   border-left:4px solid var(--mat-sys-primary);">
+                   border-left:4px solid #ff9800;">
             <mat-card-header>
               <mat-card-title style="font-size:1rem;">
                 {{ task.nodeLabel || task.nodeId }}
@@ -150,6 +159,9 @@ import { TaskResponse, TaskNotificationDto } from '../../core/models/responses';
               <mat-card-subtitle>
                 Trámite: {{ task.processInstanceId | slice:0:8 }}…
               </mat-card-subtitle>
+              <mat-chip-set>
+                <mat-chip color="primary" highlighted>En progreso</mat-chip>
+              </mat-chip-set>
             </mat-card-header>
             <mat-card-actions align="end">
               <button mat-stroked-button color="primary"
@@ -170,6 +182,62 @@ import { TaskResponse, TaskNotificationDto } from '../../core/models/responses';
               <p style="color:var(--mat-sys-on-surface-variant);
                         margin:8px 0 0;">
                 Sin tareas en progreso
+              </p>
+            </mat-card-content>
+          </mat-card>
+        }
+      </div>
+
+      <!-- COLUMNA DERECHA — Tareas COMPLETED -->
+      <div>
+        <div style="display:flex; align-items:center;
+                    gap:8px; margin-bottom:16px;">
+          <mat-icon style="color:#4caf50">task_alt</mat-icon>
+          <h2 style="margin:0; font-size:1.1rem;">Completadas</h2>
+          @if (completedTasks().length > 0) {
+            <mat-chip style="background:#4caf50; color:white;" highlighted>
+              {{ completedTasks().length }}
+            </mat-chip>
+          }
+        </div>
+
+        @for (task of completedTasks(); track task.id) {
+          <mat-card appearance="outlined"
+            style="margin-bottom:12px;
+                   border-left:4px solid #4caf50;
+                   opacity:0.8;">
+            <mat-card-header>
+              <mat-card-title style="font-size:1rem;">
+                {{ task.nodeLabel || task.nodeId }}
+              </mat-card-title>
+              <mat-card-subtitle>
+                Trámite: {{ task.processInstanceId | slice:0:8 }}…
+              </mat-card-subtitle>
+              <mat-chip-set>
+                <mat-chip style="background:#4caf50; color:white;">
+                  Completado
+                </mat-chip>
+              </mat-chip-set>
+            </mat-card-header>
+            <mat-card-content style="padding-top:8px;">
+              <p style="margin:0; font-size:0.85rem;
+                        color:var(--mat-sys-on-surface-variant);">
+                Completado: {{ task.assignedAt | date:'dd/MM/yyyy HH:mm' }}
+              </p>
+            </mat-card-content>
+          </mat-card>
+        }
+
+        @if (!loading() && completedTasks().length === 0) {
+          <mat-card appearance="outlined">
+            <mat-card-content style="text-align:center; padding:32px;">
+              <mat-icon style="font-size:48px; width:48px; height:48px;
+                        color:var(--mat-sys-on-surface-variant);">
+                hourglass_empty
+              </mat-icon>
+              <p style="color:var(--mat-sys-on-surface-variant);
+                        margin:8px 0 0;">
+                Sin tareas completadas
               </p>
             </mat-card-content>
           </mat-card>
@@ -201,10 +269,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
   readonly inProgressTasks = computed(() =>
     this.tasks().filter(t => t.status === 'IN_PROGRESS')
   );
+  readonly completedTasks = computed(() =>
+    this.tasks().filter(t => t.status === 'COMPLETED')
+  );
+  readonly hasNewTask = signal(false);
 
   ngOnInit(): void {
     this.loadTasks();
     this.subscribeWebSocket();
+  }
+
+  onRefresh(): void {
+    this.hasNewTask.set(false);
+    this.loadTasks();
   }
 
   ngOnDestroy(): void {
@@ -247,6 +324,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       const s1 = this.ws
         .subscribe<TaskNotificationDto>(`/topic/department/${user.departmentId}`)
         .subscribe(notification => {
+          this.hasNewTask.set(true);
           this.snack.open(
             `Nueva tarea: ${notification.nodeLabel} — ${notification.policyName}`,
             'Ver',
