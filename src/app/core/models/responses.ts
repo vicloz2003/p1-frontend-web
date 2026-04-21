@@ -27,6 +27,7 @@ export interface PolicyResponse {
   partitions: ActivityPartition[];
   nodes: ActivityNode[];
   flows: ControlFlow[];
+  bpmnXml?: string;
   createdAt: string;
   updatedAt: string;
 }

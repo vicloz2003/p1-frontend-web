@@ -19,6 +19,7 @@ export interface CreatePolicyRequest {
   partitions: ActivityPartition[];
   nodes: ActivityNode[];
   flows: ControlFlow[];
+  bpmnXml?: string; 
 }
 
 export interface LoginRequest {
@@ -51,4 +52,5 @@ export interface UpdatePolicyRequest {
   partitions: ActivityPartition[];
   nodes: ActivityNode[];
   flows: ControlFlow[];
+  bpmnXml?: string;
 }
