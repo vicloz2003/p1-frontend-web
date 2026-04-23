@@ -105,9 +105,16 @@ export class DepartmentsComponent implements OnInit {
       .afterClosed()
       .subscribe((result: { name: string; description: string } | null) => {
         if (!result) return;
-        this.http.post<Department>(this.API, result).subscribe(response => {
-          this.departments.update(list => [...list, response]);
-          this.snack.open('Departamento creado', 'OK', { duration: 3000 });
+        this.http.post<Department>(this.API, result).subscribe({
+          next: response => {
+            this.departments.update(list => [...list, response]);
+            this.snack.open('Departamento creado', 'OK', { duration: 3000 });
+          },
+          error: (err) => {
+            this.snack.open(
+              err.error?.message ?? 'Error al crear el departamento',
+              'OK', { duration: 4000 });
+          },
         });
       });
   }

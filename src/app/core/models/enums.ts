@@ -14,4 +14,4 @@ export type InstanceStatus = 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
 
 export type TaskStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
 
-export type SystemRole = 'ADMIN_DESIGNER' | 'EMPLOYEE';
+export type SystemRole = 'ADMIN_DESIGNER' | 'EMPLOYEE' | 'CLIENT';

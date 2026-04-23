@@ -247,7 +247,7 @@ export class DesignerComponent implements OnDestroy {
     if (this.isEditMode()) {
       this.policyService.updatePolicy(this.policyId()!, request as UpdatePolicyRequest).subscribe({
         next: () => this.snackBar.open('Política actualizada', 'OK', { duration: 3000 }),
-        error: () => this.snackBar.open('Error al actualizar', 'OK', { duration: 3000 }),
+        error: (err) => this.snackBar.open(err.error?.message ?? 'Error al actualizar', 'OK', { duration: 3000 }),
       });
     } else {
       this.policyService.createPolicy(request as CreatePolicyRequest).subscribe({
@@ -255,7 +255,7 @@ export class DesignerComponent implements OnDestroy {
           this.policyId.set(response.id);
           this.snackBar.open('Política guardada', 'OK', { duration: 3000 });
         },
-        error: () => this.snackBar.open('Error al guardar', 'OK', { duration: 3000 }),
+        error: (err) => this.snackBar.open(err.error?.message ?? 'Error al guardar', 'OK', { duration: 3000 }),
       });
     }
   }
@@ -269,7 +269,15 @@ export class DesignerComponent implements OnDestroy {
         } else {
           await this.modeler.importXML(INITIAL_BPMN_TEMPLATE);
         }
+        policy.partitions.forEach(partition => {
+          this.laneToDepart.set(partition.id, partition.departmentId);
+        });
         this.refreshLanes();
+        if (this.departments().length === 0) {
+          this.http
+            .get<Department[]>('http://localhost:3000/api/v1/departments')
+            .subscribe(data => this.departments.set(data));
+        }
       },
       error: () => {
         this.snackBar.open('Error al cargar la política', 'OK', { duration: 3000 });

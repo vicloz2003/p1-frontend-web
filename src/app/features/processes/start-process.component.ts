@@ -9,16 +9,21 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatListModule } from '@angular/material/list';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatToolbarModule } from '@angular/material/toolbar';
+import { ReactiveFormsModule } from '@angular/forms';
 import { BusinessPolicy } from '../../core/models/domain';
-import { ProcessStatusResponse } from '../../core/models/responses';
+import { ProcessStatusResponse, UserResponse } from '../../core/models/responses';
 
 interface StartProcessRequest {
   policyId: string;
   initialData: Record<string, never>;
+  clientId: string | null;
 }
 
 @Component({
@@ -29,8 +34,12 @@ interface StartProcessRequest {
     MatButtonModule,
     MatIconModule,
     MatCardModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatListModule,
     MatProgressBarModule,
     MatSnackBarModule,
+    ReactiveFormsModule,
   ],
   template: `
     <mat-toolbar>
@@ -46,6 +55,81 @@ interface StartProcessRequest {
       <p style="color:var(--mat-sys-on-surface-variant); margin-bottom:24px;">
         Selecciona una política activa para iniciar un nuevo trámite.
       </p>
+
+      <mat-card appearance="outlined" style="margin-bottom:24px;">
+        <mat-card-header>
+          <mat-card-title style="font-size:1rem;">
+            <mat-icon>person_search</mat-icon>
+            Asociar cliente (opcional)
+          </mat-card-title>
+        </mat-card-header>
+        <mat-card-content style="padding-top:16px;">
+
+          <p style="font-size:0.85rem;
+                    color:var(--mat-sys-on-surface-variant);
+                    margin:0 0 16px;">
+            Busca al cliente por email para asociarlo al trámite.
+            Si no se asocia, el trámite se iniciará sin cliente.
+          </p>
+
+          <div style="display:flex; gap:8px; align-items:center;">
+            <mat-form-field appearance="outline"
+                            style="flex:1;" subscriptSizing="dynamic">
+              <mat-label>Buscar cliente por email</mat-label>
+              <input matInput
+                     [value]="clientSearch()"
+                     (input)="clientSearch.set($any($event.target).value)"
+                     placeholder="ejemplo@correo.com">
+              @if (selectedClient()) {
+                <mat-icon matSuffix color="primary">check_circle</mat-icon>
+              }
+            </mat-form-field>
+            <button mat-flat-button color="primary"
+                    (click)="searchClient()"
+                    [disabled]="clientSearch().length < 3 || searching()">
+              @if (searching()) {
+                Buscando&hellip;
+              } @else {
+                <mat-icon>search</mat-icon> Buscar
+              }
+            </button>
+            @if (selectedClient()) {
+              <button mat-stroked-button color="warn"
+                      (click)="clearClient()">
+                <mat-icon>clear</mat-icon>
+              </button>
+            }
+          </div>
+
+          @if (clientResults().length > 0) {
+            <mat-list style="margin-top:8px;">
+              @for (user of clientResults(); track user.id) {
+                <mat-list-item (click)="selectClient(user)"
+                               style="cursor:pointer;">
+                  <mat-icon matListItemIcon>person</mat-icon>
+                  <span matListItemTitle>{{ user.username }}</span>
+                  <span matListItemLine>{{ user.email }}</span>
+                </mat-list-item>
+              }
+            </mat-list>
+          }
+
+          @if (selectedClient(); as client) {
+            <div style="display:flex; align-items:center; gap:8px;
+                        margin-top:12px; padding:8px;
+                        background:var(--mat-sys-primary-container);
+                        border-radius:8px;">
+              <mat-icon color="primary">person_check</mat-icon>
+              <span style="font-size:0.9rem;">
+                Cliente seleccionado:
+                <strong>{{ client.username }}</strong>
+                &mdash; {{ client.email }}
+              </span>
+            </div>
+          }
+
+        </mat-card-content>
+      </mat-card>
 
       @for (policy of policies(); track policy.id) {
         <mat-card appearance="outlined" style="margin-bottom:16px;">
@@ -98,21 +182,58 @@ export class StartProcessComponent implements OnInit {
   readonly loading = signal(false);
   readonly starting = signal<string | null>(null);
 
+  readonly clientSearch = signal('');
+  readonly clientResults = signal<UserResponse[]>([]);
+  readonly selectedClient = signal<UserResponse | null>(null);
+  readonly searching = signal(false);
+
   ngOnInit(): void {
-  this.loading.set(true);
-  this.http.get<BusinessPolicy[]>(`${this.API}/policies/active`)
-    .subscribe({
-      next: (data) => {
-        this.policies.set(data);
-        this.loading.set(false);
-      },
-      error: () => this.loading.set(false)
-    });
-}
+    this.loading.set(true);
+    this.http.get<BusinessPolicy[]>(`${this.API}/policies/active`)
+      .subscribe({
+        next: (data) => {
+          this.policies.set(data);
+          this.loading.set(false);
+        },
+        error: () => this.loading.set(false),
+      });
+  }
+
+  searchClient(): void {
+    if (this.clientSearch().length < 3) return;
+    this.searching.set(true);
+    this.http
+      .get<UserResponse[]>(`${this.API}/users/search`, {
+        params: { email: this.clientSearch() },
+      })
+      .subscribe({
+        next: (data) => {
+          this.clientResults.set(data.filter((u) => u.role === 'CLIENT'));
+          this.searching.set(false);
+        },
+        error: () => this.searching.set(false),
+      });
+  }
+
+  selectClient(user: UserResponse): void {
+    this.selectedClient.set(user);
+    this.clientResults.set([]);
+    this.clientSearch.set(user.email);
+  }
+
+  clearClient(): void {
+    this.selectedClient.set(null);
+    this.clientSearch.set('');
+    this.clientResults.set([]);
+  }
 
   startProcess(policy: BusinessPolicy): void {
     this.starting.set(policy.id);
-    const body: StartProcessRequest = { policyId: policy.id, initialData: {} };
+    const body: StartProcessRequest = {
+      policyId: policy.id,
+      initialData: {},
+      clientId: this.selectedClient()?.id ?? null,
+    };
     this.http.post<ProcessStatusResponse>(`${this.API}/processes`, body).subscribe({
       next: () => {
         this.starting.set(null);

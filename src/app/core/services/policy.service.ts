@@ -20,4 +20,8 @@ export class PolicyService {
 getById(id: string): Observable<PolicyResponse> {
   return this.http.get<PolicyResponse>(`${this.baseUrl}/${id}`);
 }
+
+  deletePolicy(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/${id}`);
+  }
 }

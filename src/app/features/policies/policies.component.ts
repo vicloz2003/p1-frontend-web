@@ -17,6 +17,7 @@ import { MatTableModule } from '@angular/material/table';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { BusinessPolicy } from '../../core/models/domain';
+import { PolicyService } from '../../core/services/policy.service';
 
 @Component({
   selector: 'app-policies',
@@ -96,6 +97,15 @@ import { BusinessPolicy } from '../../core/models/domain';
             </button>
           }
 
+          @if (policy.status === 'DRAFT') {
+            <button mat-icon-button color="warn"
+                    (click)="deletePolicy(policy)"
+                    [disabled]="deleting() === policy.id"
+                    matTooltip="Eliminar política">
+              <mat-icon>delete_outline</mat-icon>
+            </button>
+          }
+
           @if (policy.status === 'ACTIVE') {
             <button mat-icon-button
                     (click)="router.navigate(['/processes'], { queryParams: { policyId: policy.id } })"
@@ -129,12 +139,14 @@ export class PoliciesComponent implements OnInit {
   private readonly http = inject(HttpClient);
   readonly router = inject(Router);
   private readonly snack = inject(MatSnackBar);
+  private readonly policyService = inject(PolicyService);
 
   private readonly API = 'http://localhost:3000/api/v1';
 
   readonly policies = signal<BusinessPolicy[]>([]);
   readonly loading = signal(false);
   readonly publishing = signal<string | null>(null);
+  readonly deleting = signal<string | null>(null);
   readonly displayedColumns = ['name', 'status', 'createdAt', 'updatedAt', 'actions'];
 
   ngOnInit(): void {
@@ -173,6 +185,24 @@ export class PoliciesComponent implements OnInit {
       error: () => {
         this.publishing.set(null);
         this.snack.open('Error al publicar la política', 'OK', { duration: 4000 });
+      },
+    });
+  }
+
+  deletePolicy(policy: BusinessPolicy): void {
+    if (!confirm(`¿Eliminar la política "${policy.name}"? Esta acción no se puede deshacer.`)) return;
+    this.deleting.set(policy.id);
+    this.policyService.deletePolicy(policy.id).subscribe({
+      next: () => {
+        this.policies.update(list => list.filter(p => p.id !== policy.id));
+        this.deleting.set(null);
+        this.snack.open('Política eliminada', 'OK', { duration: 3000 });
+      },
+      error: (err) => {
+        this.deleting.set(null);
+        this.snack.open(
+          err.error?.message ?? 'No se puede eliminar — tiene trámites activos',
+          'OK', { duration: 4000 });
       },
     });
   }

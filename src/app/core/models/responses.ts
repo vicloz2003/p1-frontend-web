@@ -37,6 +37,7 @@ export interface ProcessStatusResponse {
   currentNodeId: string;
   status: InstanceStatus;
   startedAt: string;
+  clientId: string | null;
 }
 
 export interface RefreshResponse {
