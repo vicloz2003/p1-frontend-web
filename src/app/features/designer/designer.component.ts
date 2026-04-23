@@ -24,6 +24,7 @@ import { CreatePolicyRequest, UpdatePolicyRequest } from '../../core/models/requ
 import { PolicyResponse } from '../../core/models/responses';
 import { PolicyService } from '../../core/services/policy.service';
 import { FormEditorDialogComponent } from './form-editor-dialog/form-editor-dialog.component';
+import { GuardConditionDialogComponent } from './guard-condition-dialog/guard-condition-dialog.component';
 import { INITIAL_BPMN_TEMPLATE } from './initial-template';
 import { LanePanelComponent } from './lane-panel/lane-panel.component';
 import { FormSchema } from './models/form-schema.models';
@@ -74,6 +75,7 @@ export class DesignerComponent implements OnDestroy {
   private modeler!: BpmnModeler;
   private readonly laneToDepart = new Map<string, string>();
   private readonly nodeFormSchemas = new Map<string, FormSchema>();
+  private readonly flowConditions = new Map<string, string>();
   private readonly http = inject(HttpClient);
   private readonly route = inject(ActivatedRoute);
   private readonly policyService = inject(PolicyService);
@@ -98,19 +100,58 @@ export class DesignerComponent implements OnDestroy {
           }
         }
         this.modeler.on('commandStack.changed', () => this.refreshLanes());
-        this.modeler.on('element.dblclick', (event: { element: BpmnElement }) => {
-          const el = event.element;
-          const type = el.businessObject.$type;
-          const isAction =
-            type === 'bpmn:Task' ||
-            type === 'bpmn:UserTask' ||
-            type === 'bpmn:ServiceTask';
-          if (!isAction) return;
 
-          const existingSchema = this.nodeFormSchemas.get(el.id) ?? { fields: [] };
+        this.modeler.on('element.dblclick',
+          (event: { element: BpmnElement }) => {
+            const el = event.element;
 
-          this.dialog
-            .open(FormEditorDialogComponent, {
+            // CASO 1: Flujo saliente de ExclusiveGateway
+            if (el.businessObject.$type === 'bpmn:SequenceFlow') {
+              console.log('[FLOW] source type:', el.source?.businessObject?.$type);
+              console.log('[FLOW] source name:', el.source?.businessObject?.name);
+              const source = el.source;
+              if (source?.businessObject?.$type !== 'bpmn:ExclusiveGateway') {
+                console.log('[FLOW] Not from gateway — skipping');
+                return;
+              }
+              this.dialog.open(GuardConditionDialogComponent, {
+                data: {
+                  flowId: el.id,
+                  sourceLabel: source.businessObject.name || 'Gateway',
+                  targetLabel: el.target?.businessObject?.name
+                               || 'Nodo siguiente',
+                  currentCondition: this.flowConditions.get(el.id) ?? null,
+                },
+                width: '560px',
+              }).afterClosed().subscribe((result: string | null) => {
+                if (result === null) return;
+                if (result === '') {
+                  this.flowConditions.delete(el.id);
+                } else {
+                  this.flowConditions.set(el.id, result);
+                  // Mostrar condición como label en el canvas
+                  const modeling = this.modeler.get('modeling');
+                  const registry: ElementRegistry =
+                    this.modeler.get('elementRegistry');
+                  const flowElement = registry.get(el.id);
+                  if (flowElement) {
+                    modeling['updateLabel'](flowElement, result);
+                  }
+                }
+              });
+              return; // ← CRÍTICO: detener aquí, no continuar
+            }
+
+            // CASO 2: Nodo ACTION — lógica existente sin modificar
+            const type = el.businessObject.$type;
+            const isAction = type === 'bpmn:Task' ||
+                             type === 'bpmn:UserTask' ||
+                             type === 'bpmn:ServiceTask';
+            if (!isAction) return;
+
+            const existingSchema = this.nodeFormSchemas.get(el.id)
+                                   ?? { fields: [] };
+            this.dialog.open(FormEditorDialogComponent, {
               data: {
                 nodeId: el.id,
                 nodeLabel: el.businessObject.name || 'Nodo sin nombre',
@@ -118,15 +159,13 @@ export class DesignerComponent implements OnDestroy {
               },
               width: '680px',
               maxHeight: '80vh',
-            })
-            .afterClosed()
-            .subscribe((result: FormSchema | null) => {
+            }).afterClosed().subscribe((result: FormSchema | null) => {
               if (result) {
                 this.nodeFormSchemas.set(el.id, result);
                 this.refreshNodeMarkers();
               }
             });
-        });
+          });
         this.http
           .get<Department[]>('http://localhost:3000/api/v1/departments')
           .subscribe(data => this.departments.set(data));
@@ -209,12 +248,16 @@ export class DesignerComponent implements OnDestroy {
       });
 
     const flows: ControlFlow[] = elements
-      .filter(el => el.businessObject.$type === 'bpmn:SequenceFlow')
+      .filter(el =>
+        el.businessObject.$type === 'bpmn:SequenceFlow' &&
+        el.source?.id != null &&
+        el.target?.id != null
+      )
       .map(el => ({
         id: el.id,
         sourceNodeId: el.source.id,
         targetNodeId: el.target.id,
-        guardCondition: el.businessObject.conditionExpression?.body ?? null,
+        guardCondition: this.flowConditions.get(el.id) ?? null,
       }));
 
     const enrichedPartitions = partitions.map(p => ({
@@ -247,7 +290,7 @@ export class DesignerComponent implements OnDestroy {
     if (this.isEditMode()) {
       this.policyService.updatePolicy(this.policyId()!, request as UpdatePolicyRequest).subscribe({
         next: () => this.snackBar.open('Política actualizada', 'OK', { duration: 3000 }),
-        error: (err) => this.snackBar.open(err.error?.message ?? 'Error al actualizar', 'OK', { duration: 3000 }),
+        error: (err) => this.snackBar.open(err.error?.detail ?? err.error?.message ?? 'Error al actualizar', 'OK', { duration: 5000 }),
       });
     } else {
       this.policyService.createPolicy(request as CreatePolicyRequest).subscribe({
@@ -269,10 +312,21 @@ export class DesignerComponent implements OnDestroy {
         } else {
           await this.modeler.importXML(INITIAL_BPMN_TEMPLATE);
         }
+        policy.nodes.forEach(node => {
+          if (node.formSchema && (node.formSchema as unknown as FormSchema).fields?.length > 0) {
+            this.nodeFormSchemas.set(node.id, node.formSchema as unknown as FormSchema);
+          }
+        });
+        policy.flows.forEach(flow => {
+          if (flow.guardCondition) {
+            this.flowConditions.set(flow.id, flow.guardCondition);
+          }
+        });
         policy.partitions.forEach(partition => {
           this.laneToDepart.set(partition.id, partition.departmentId);
         });
         this.refreshLanes();
+        this.refreshNodeMarkers();
         if (this.departments().length === 0) {
           this.http
             .get<Department[]>('http://localhost:3000/api/v1/departments')

@@ -186,7 +186,7 @@ export class FormEditorDialogComponent {
     const raw = this.newFieldForm.getRawValue();
     const fieldType = raw.type as FormField['type'];
     const newField: FormField = {
-      id: crypto.randomUUID(),
+      id: this.toFieldId(raw.label ?? ''),
       type: fieldType,
       label: raw.label ?? '',
       required: raw.required ?? false,
@@ -210,5 +210,14 @@ export class FormEditorDialogComponent {
 
   cancel(): void {
     this.dialogRef.close(null);
+  }
+
+  private toFieldId(label: string): string {
+    return label
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')   // strip diacritics (é→e, ó→o, etc.)
+      .replace(/\s+/g, '_')
+      .replace(/[^a-z0-9_]/g, '');
   }
 }

@@ -24,6 +24,7 @@ declare module 'bpmn-js/lib/Modeler' {
     get(id: string): BpmnElement | undefined;
   }
   export interface ModelingService {
+    updateLabel(element: BpmnElement, label: string): void;
     [key: string]: unknown;
   }
   export interface CanvasService {

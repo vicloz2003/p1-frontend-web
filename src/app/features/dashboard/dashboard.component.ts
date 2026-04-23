@@ -294,6 +294,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       next: data => {
         this.tasks.set([...data]); // nueva referencia fuerza re-render
         this.loading.set(false);
+        this.hasNewTask.set(false);
       },
       error: () => this.loading.set(false),
     });
@@ -327,7 +328,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.hasNewTask.set(true);
           this.snack.open(
             `Nueva tarea: ${notification.nodeLabel} — ${notification.policyName}`,
-            'Ver',
+            'OK',
             { duration: 5000 }
           );
           this.loadTasks();
