@@ -30,7 +30,9 @@ import { GuardConditionDialogComponent } from './guard-condition-dialog/guard-co
 import { INITIAL_BPMN_TEMPLATE } from './initial-template';
 import { LanePanelComponent } from './lane-panel/lane-panel.component';
 import { IaDialogComponent, IaDialogData } from './ia-dialog/ia-dialog.component';
+import { Subscription } from 'rxjs';
 import { FormSchema } from './models/form-schema.models';
+import { WebSocketService } from '../../core/websocket/websocket.service';
 
 const SHAPE_TYPES = new Set([
   'bpmn:StartEvent',
@@ -84,6 +86,10 @@ export class DesignerComponent implements OnDestroy {
   private readonly policyService = inject(PolicyService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
+  private readonly ws = inject(WebSocketService);
+
+  collaborating = false;
+  private readonly collabSubs: Subscription[] = [];
 
   constructor() {
     afterNextRender(async () => {
@@ -404,7 +410,57 @@ export class DesignerComponent implements OnDestroy {
     });
   }
 
+  startCollaboration(): void {
+    const policyId = this.policyId();
+    if (!policyId || this.collaborating) return;
+    this.collaborating = true;
+
+    const sub = this.ws.subscribe<{
+      sessionId: string;
+      policyId: string;
+      bpmnXml: string;
+    }>(`/topic/colaboracion/${policyId}`)
+    .subscribe(async payload => {
+      if (payload.sessionId === this.ws.getSessionId()) return;
+      try {
+        await this.modeler.importXML(payload.bpmnXml);
+        this.refreshLanes();
+        console.log('[COLLAB] Diagrama actualizado desde otro participante');
+      } catch (err) {
+        console.error('[COLLAB] Error importando XML:', err);
+      }
+    });
+
+    this.collabSubs.push(sub);
+
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    this.modeler.on('commandStack.changed', async () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(async () => {
+        try {
+          const { xml } = await this.modeler.saveXML({ format: false });
+          if (xml) {
+            this.ws.publish(`/app/colaboracion/${policyId}`, {
+              sessionId: this.ws.getSessionId(),
+              policyId,
+              bpmnXml: xml,
+            });
+          }
+        } catch (err) {
+          console.error('[COLLAB] Error publicando cambio:', err);
+        }
+      }, 500);
+    });
+
+    this.snackBar.open(
+      'Modo colaborativo activo — los cambios se sincronizan en tiempo real',
+      'OK',
+      { duration: 4000 }
+    );
+  }
+
   ngOnDestroy(): void {
+    this.collabSubs.forEach(s => s.unsubscribe());
     this.modeler?.destroy();
   }
 }

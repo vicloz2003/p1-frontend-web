@@ -11,6 +11,16 @@
     <mat-icon>auto_awesome</mat-icon>
     Generar con IA
   </button>
+  @if (policyId()) {
+    <button mat-stroked-button
+            (click)="startCollaboration()"
+            [disabled]="collaborating"
+            style="margin-right:8px;"
+            matTooltip="Activar edición colaborativa">
+      <mat-icon>group</mat-icon>
+      {{ collaborating ? 'Colaborando' : 'Colaborar' }}
+    </button>
+  }
   <button mat-raised-button (click)="savePolicy()">Guardar Política</button>
 </mat-toolbar>
 

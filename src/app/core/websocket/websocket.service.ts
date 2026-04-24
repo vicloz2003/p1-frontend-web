@@ -9,6 +9,11 @@ export class WebSocketService {
   private readonly auth = inject(AuthService);
 
   private client!: Client;
+  private readonly sessionId = crypto.randomUUID();
+
+  getSessionId(): string {
+    return this.sessionId;
+  }
 
   constructor() {
     setTimeout(() => this.initClient(), 0);
@@ -49,6 +54,17 @@ export class WebSocketService {
         }
       };
       return trySubscribe();
+    });
+  }
+
+  publish(destination: string, body: unknown): void {
+    if (!this.client?.connected) {
+      console.warn('[WS] Cannot publish — not connected');
+      return;
+    }
+    this.client.publish({
+      destination,
+      body: JSON.stringify(body),
     });
   }
 }
