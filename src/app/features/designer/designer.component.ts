@@ -16,7 +16,9 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatIconModule } from '@angular/material/icon';
 import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import BpmnModeler, { BpmnElement, ElementRegistry } from 'bpmn-js/lib/Modeler';
 import { ActivityNode, ActivityPartition, ControlFlow, Department } from '../../core/models/domain';
 import { NodeType } from '../../core/models/enums';
@@ -27,6 +29,7 @@ import { FormEditorDialogComponent } from './form-editor-dialog/form-editor-dial
 import { GuardConditionDialogComponent } from './guard-condition-dialog/guard-condition-dialog.component';
 import { INITIAL_BPMN_TEMPLATE } from './initial-template';
 import { LanePanelComponent } from './lane-panel/lane-panel.component';
+import { IaDialogComponent, IaDialogData } from './ia-dialog/ia-dialog.component';
 import { FormSchema } from './models/form-schema.models';
 
 const SHAPE_TYPES = new Set([
@@ -62,7 +65,7 @@ function mapNodeType(el: BpmnElement): NodeType {
   templateUrl: './designer.component.html',
   styleUrl: './designer.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatToolbarModule, MatButtonModule, MatFormFieldModule, MatInputModule, LanePanelComponent],
+  imports: [MatToolbarModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatIconModule, MatTooltipModule, LanePanelComponent, IaDialogComponent],
 })
 export class DesignerComponent implements OnDestroy {
   readonly canvas = viewChild<ElementRef<HTMLElement>>('canvas');
@@ -336,6 +339,68 @@ export class DesignerComponent implements OnDestroy {
       error: () => {
         this.snackBar.open('Error al cargar la política', 'OK', { duration: 3000 });
       },
+    });
+  }
+
+  openIaDialog(): void {
+    this.dialog.open(IaDialogComponent, {
+      data: { departments: this.departments() } satisfies IaDialogData,
+      width: '560px',
+    }).afterClosed().subscribe(async (result) => {
+      if (!result) return;
+
+      const confirmed = confirm(
+        '¿Reemplazar el diagrama actual con el generado por IA?\n' +
+        'Esta acción no se puede deshacer.'
+      );
+      if (!confirmed) return;
+
+      // Actualizar nombre
+      this.policyName.set(result.name ?? 'Nueva Política IA');
+
+      // Limpiar estado previo
+      this.nodeFormSchemas.clear();
+      this.flowConditions.clear();
+      this.laneToDepart.clear();
+
+      // Restaurar formSchemas
+      result.nodes?.forEach((node: any) => {
+        if (node.formSchema?.fields?.length > 0) {
+          this.nodeFormSchemas.set(node.id, node.formSchema);
+        }
+      });
+
+      // Restaurar flowConditions
+      result.flows?.forEach((flow: any) => {
+        if (flow.guardCondition) {
+          this.flowConditions.set(flow.id, flow.guardCondition);
+        }
+      });
+
+      // Restaurar laneToDepart
+      result.partitions?.forEach((partition: any) => {
+        if (partition.departmentId) {
+          this.laneToDepart.set(partition.id, partition.departmentId);
+        }
+      });
+
+      // Importar template vacío y refrescar lanes
+      if (result.suggestedBpmnXml) {
+        await this.modeler.importXML(result.suggestedBpmnXml);
+      } else {
+        await this.modeler.importXML(INITIAL_BPMN_TEMPLATE);
+      }
+
+      // Sincronizar lanes desde el modelo BPMN (usa laneToDepart para departmentId)
+      this.refreshLanes();
+
+      this.snackBar.open(
+        `Diagrama generado: ${result.nodes?.length} nodos, ` +
+        `${result.flows?.length} flujos. ` +
+        `Guarda la política para continuar.`,
+        'OK',
+        { duration: 6000 }
+      );
     });
   }
 
