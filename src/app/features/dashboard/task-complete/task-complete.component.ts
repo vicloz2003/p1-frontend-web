@@ -178,8 +178,11 @@ export class TaskCompleteComponent implements OnInit {
         case 'FILE':
           return {
             ...base,
-            type: 'input',
-            props: { ...base.props, type: 'text', label: field.label + ' (URL o ruta)' },
+            type: 'file-upload',
+            props: {
+              label: field.label,
+              required: field.required,
+            },
           };
         case 'SIGNATURE':
           return {

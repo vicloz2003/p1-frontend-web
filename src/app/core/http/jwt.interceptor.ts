@@ -2,7 +2,12 @@ import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { AuthService } from '../auth/auth.service';
 
-const PUBLIC_ENDPOINTS = ['/auth/login', '/auth/register', '/auth/refresh'];
+const PUBLIC_ENDPOINTS = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/refresh',
+  'amazonaws.com',
+];
 
 export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
   const isPublic = PUBLIC_ENDPOINTS.some(endpoint => req.url.includes(endpoint));

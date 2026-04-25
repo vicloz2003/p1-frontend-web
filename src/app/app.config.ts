@@ -2,8 +2,10 @@ import { ApplicationConfig, importProvidersFrom, provideBrowserGlobalErrorListen
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
+
 import { FormlyModule } from '@ngx-formly/core';
 import { FormlyMaterialModule } from '@ngx-formly/material';
+import { FileFieldComponent } from './features/dashboard/task-complete/file-field/file-field.component';
 
 import { routes } from './app.routes';
 import { jwtInterceptor } from './core/http/jwt.interceptor';
@@ -15,6 +17,19 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes, withComponentInputBinding()),
     provideAnimationsAsync(),
     provideHttpClient(withInterceptors([jwtInterceptor, errorInterceptor])),
-    importProvidersFrom(FormlyModule.forRoot(), FormlyMaterialModule),
+    importProvidersFrom(
+      FormlyModule.forRoot({
+        types: [
+          {
+            name: 'file-upload',
+            component: FileFieldComponent,
+          },
+        ],
+        validationMessages: [
+          { name: 'required', message: 'Este campo es obligatorio' },
+        ],
+      }),
+      FormlyMaterialModule
+    ),
   ]
 };
