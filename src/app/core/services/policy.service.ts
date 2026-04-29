@@ -7,7 +7,7 @@ import { PolicyResponse } from '../models/responses';
 @Injectable({ providedIn: 'root' })
 export class PolicyService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = 'http://localhost:3000/api/v1/policies';
+  private readonly baseUrl = 'http://34.237.109.152:3000/api/v1/policies';
 
   createPolicy(data: CreatePolicyRequest): Observable<PolicyResponse> {
     return this.http.post<PolicyResponse>(this.baseUrl, data);

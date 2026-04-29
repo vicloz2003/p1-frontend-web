@@ -142,7 +142,7 @@ export class UsersComponent implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly snack = inject(MatSnackBar);
 
-  private readonly API = 'http://localhost:3000/api/v1';
+  private readonly API = 'http://34.237.109.152:3000/api/v1';
 
   readonly users = signal<UserResponse[]>([]);
   readonly departments = signal<Department[]>([]);

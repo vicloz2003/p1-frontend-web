@@ -176,7 +176,7 @@ export class StartProcessComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly snack = inject(MatSnackBar);
 
-  private readonly API = 'http://localhost:3000/api/v1';
+  private readonly API = 'http://34.237.109.152:3000/api/v1';
 
   readonly policies = signal<BusinessPolicy[]>([]);
   readonly loading = signal(false);

@@ -120,7 +120,7 @@ import { BottleneckResponse } from '../../core/models/responses';
 })
 export class AnalyticsComponent implements OnInit {
   private readonly http = inject(HttpClient);
-  private readonly API = 'http://localhost:3000/api/v1';
+  private readonly API = 'http://34.237.109.152:3000/api/v1';
 
   readonly bottlenecks = signal<BottleneckResponse[]>([]);
   readonly loading = signal(false);

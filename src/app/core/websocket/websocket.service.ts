@@ -9,7 +9,18 @@ export class WebSocketService {
   private readonly auth = inject(AuthService);
 
   private client!: Client;
-  private readonly sessionId = crypto.randomUUID();
+  private readonly sessionId = this.generateUUID();
+
+  private generateUUID(): string {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(
+      /[xy]/g,
+      c => {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      }
+    );
+  }
 
   getSessionId(): string {
     return this.sessionId;
@@ -24,7 +35,7 @@ export class WebSocketService {
     console.log('[WS] Initializing with token:', token ? token.substring(0, 20) + '...' : 'EMPTY');
 
     this.client = new Client({
-      webSocketFactory: () => new (SockJS as unknown as new (url: string) => object)('http://localhost:3000/ws'),
+      webSocketFactory: () => new (SockJS as unknown as new (url: string) => object)('http://34.237.109.152:3000/ws'),
       reconnectDelay: 5000,
       onConnect: () => console.log('[WS] Connected successfully'),
       onDisconnect: () => console.log('[WS] Disconnected'),

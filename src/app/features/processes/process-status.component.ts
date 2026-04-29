@@ -156,7 +156,7 @@ export class ProcessStatusComponent implements OnInit, OnDestroy {
   private readonly ws = inject(WebSocketService);
   readonly router = inject(Router);
 
-  private readonly API = 'http://localhost:3000/api/v1';
+  private readonly API = 'http://34.237.109.152:3000/api/v1';
   private wsSub?: Subscription;
 
   readonly processId = signal<string>('');

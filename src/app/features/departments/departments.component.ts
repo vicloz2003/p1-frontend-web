@@ -78,7 +78,7 @@ export class DepartmentsComponent implements OnInit {
   private readonly dialog = inject(MatDialog);
   private readonly snack = inject(MatSnackBar);
 
-  private readonly API = 'http://localhost:3000/api/v1/departments';
+  private readonly API = 'http://34.237.109.152:3000/api/v1/departments';
 
   readonly departments = signal<Department[]>([]);
   readonly loading = signal(false);

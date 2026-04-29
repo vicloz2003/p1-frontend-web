@@ -256,7 +256,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   protected readonly dialog = inject(MatDialog);
   protected readonly router = inject(Router);
 
-  private readonly API = 'http://localhost:3000/api/v1';
+  private readonly API = 'http://34.237.109.152:3000/api/v1';
   private subs: Subscription[] = [];
 
   readonly tasks = signal<TaskResponse[]>([]);

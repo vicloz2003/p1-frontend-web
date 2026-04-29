@@ -17,7 +17,7 @@ export interface JwtPayload {
 
 const ACCESS_TOKEN_KEY = 'ibpms_access_token';
 const REFRESH_TOKEN_KEY = 'ibpms_refresh_token';
-const API_BASE = 'http://localhost:3000/api/v1';
+const API_BASE = 'http://34.237.109.152:3000/api/v1';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {

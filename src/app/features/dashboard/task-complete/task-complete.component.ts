@@ -121,7 +121,7 @@ export class TaskCompleteComponent implements OnInit {
   protected readonly router = inject(Router);
   protected readonly snack = inject(MatSnackBar);
 
-  private readonly API = 'http://localhost:3000/api/v1';
+  private readonly API = 'http://34.237.109.152:3000/api/v1';
 
   readonly task = signal<TaskResponse | null>(null);
   readonly submitting = signal(false);

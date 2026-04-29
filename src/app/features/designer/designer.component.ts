@@ -176,7 +176,7 @@ export class DesignerComponent implements OnDestroy {
             });
           });
         this.http
-          .get<Department[]>('http://localhost:3000/api/v1/departments')
+          .get<Department[]>('http://34.237.109.152:3000/api/v1/departments')
           .subscribe(data => this.departments.set(data));
       }
     });
@@ -338,7 +338,7 @@ export class DesignerComponent implements OnDestroy {
         this.refreshNodeMarkers();
         if (this.departments().length === 0) {
           this.http
-            .get<Department[]>('http://localhost:3000/api/v1/departments')
+            .get<Department[]>('http://34.237.109.152:3000/api/v1/departments')
             .subscribe(data => this.departments.set(data));
         }
       },
