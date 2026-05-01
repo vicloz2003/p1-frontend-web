@@ -31,7 +31,7 @@ declare module 'bpmn-js/lib/Modeler' {
     addMarker(elementId: string, marker: string): void;
   }
   export default class BpmnModeler {
-    constructor(options: { container: HTMLElement });
+    constructor(options: { container: HTMLElement; additionalModules?: object[] });
     saveXML(options?: { format?: boolean }): Promise<BpmnSaveXMLResult>;
     importXML(xml: string): Promise<{ warnings: string[] }>;
     get(serviceName: 'elementRegistry'): ElementRegistry;
@@ -40,4 +40,10 @@ declare module 'bpmn-js/lib/Modeler' {
     on(event: string, callback: (event: { element: BpmnElement }) => void): void;
     destroy(): void;
   }
+}
+
+declare module 'tiny-svg' {
+  export function create(tag: string): SVGElement;
+  export function append(parent: SVGElement, child: SVGElement): SVGElement;
+  export function attr(element: SVGElement, attrs: Record<string, unknown>): SVGElement;
 }

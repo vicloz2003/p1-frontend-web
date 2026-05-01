@@ -28,6 +28,7 @@ import { PolicyService } from '../../core/services/policy.service';
 import { FormEditorDialogComponent } from './form-editor-dialog/form-editor-dialog.component';
 import { GuardConditionDialogComponent } from './guard-condition-dialog/guard-condition-dialog.component';
 import { INITIAL_BPMN_TEMPLATE } from './initial-template';
+import { CustomParallelGatewayModule } from './custom-parallel-gateway-renderer';
 import { LanePanelComponent } from './lane-panel/lane-panel.component';
 import { IaDialogComponent, IaDialogData } from './ia-dialog/ia-dialog.component';
 import { Subscription } from 'rxjs';
@@ -95,7 +96,7 @@ export class DesignerComponent implements OnDestroy {
     afterNextRender(async () => {
       const container = this.canvas()?.nativeElement;
       if (container) {
-        this.modeler = new BpmnModeler({ container });
+        this.modeler = new BpmnModeler({ container, additionalModules: [CustomParallelGatewayModule] });
         const id = this.route.snapshot.paramMap.get('id');
         if (id) {
           this.policyId.set(id);
