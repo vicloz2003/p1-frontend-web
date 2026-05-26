@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute } from '@angular/router';
+import { environment } from '../../../environments/environment';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -167,8 +168,10 @@ export class DesignerComponent implements OnDestroy {
                 nodeLabel: el.businessObject.name || 'Nodo sin nombre',
                 schema: existingSchema,
               },
-              width: '680px',
-              maxHeight: '80vh',
+              width: '95vw',
+              maxWidth: '95vw',
+              height: '90vh',
+              panelClass: 'form-editor-fullscreen',
             }).afterClosed().subscribe((result: FormSchema | null) => {
               if (result) {
                 this.nodeFormSchemas.set(el.id, result);
@@ -177,7 +180,7 @@ export class DesignerComponent implements OnDestroy {
             });
           });
         this.http
-          .get<Department[]>('http://34.237.109.152:3000/api/v1/departments')
+          .get<Department[]>(`${environment.apiUrl}/departments`)
           .subscribe(data => this.departments.set(data));
       }
     });
@@ -339,7 +342,7 @@ export class DesignerComponent implements OnDestroy {
         this.refreshNodeMarkers();
         if (this.departments().length === 0) {
           this.http
-            .get<Department[]>('http://34.237.109.152:3000/api/v1/departments')
+            .get<Department[]>(`${environment.apiUrl}/departments`)
             .subscribe(data => this.departments.set(data));
         }
       },
