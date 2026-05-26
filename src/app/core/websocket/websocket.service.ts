@@ -3,6 +3,7 @@ import { Client, IMessage } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { Observable } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
+import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class WebSocketService {
@@ -35,7 +36,7 @@ export class WebSocketService {
     console.log('[WS] Initializing with token:', token ? token.substring(0, 20) + '...' : 'EMPTY');
 
     this.client = new Client({
-      webSocketFactory: () => new (SockJS as unknown as new (url: string) => object)('http://34.237.109.152:3000/ws'),
+      webSocketFactory: () => new (SockJS as unknown as new (url: string) => object)(environment.wsUrl),
       reconnectDelay: 5000,
       onConnect: () => console.log('[WS] Connected successfully'),
       onDisconnect: () => console.log('[WS] Disconnected'),

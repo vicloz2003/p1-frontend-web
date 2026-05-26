@@ -8,6 +8,7 @@ import {
 import { DatePipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { environment } from '../../../environments/environment';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
@@ -141,7 +142,7 @@ export class PoliciesComponent implements OnInit {
   private readonly snack = inject(MatSnackBar);
   private readonly policyService = inject(PolicyService);
 
-  private readonly API = 'http://34.237.109.152:3000/api/v1';
+  private readonly API = environment.apiUrl;
 
   readonly policies = signal<BusinessPolicy[]>([]);
   readonly loading = signal(false);

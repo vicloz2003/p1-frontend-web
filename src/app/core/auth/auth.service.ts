@@ -5,6 +5,7 @@ import { catchError, EMPTY, Observable, tap } from 'rxjs';
 import { LoginRequest, LogoutRequest, RefreshTokenRequest, RegisterRequest } from '../models/requests';
 import { LoginResponse, RefreshResponse, RegisterResponse } from '../models/responses';
 import { SystemRole } from '../models/enums';
+import { environment } from '../../../environments/environment';
 
 export interface JwtPayload {
   sub: string;
@@ -17,7 +18,7 @@ export interface JwtPayload {
 
 const ACCESS_TOKEN_KEY = 'ibpms_access_token';
 const REFRESH_TOKEN_KEY = 'ibpms_refresh_token';
-const API_BASE = 'http://34.237.109.152:3000/api/v1';
+const API_BASE = environment.apiUrl;
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {

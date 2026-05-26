@@ -7,6 +7,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { BottleneckResponse } from '../../core/models/responses';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-analytics',
@@ -120,7 +121,7 @@ import { BottleneckResponse } from '../../core/models/responses';
 })
 export class AnalyticsComponent implements OnInit {
   private readonly http = inject(HttpClient);
-  private readonly API = 'http://34.237.109.152:3000/api/v1';
+  private readonly API = environment.apiUrl;
 
   readonly bottlenecks = signal<BottleneckResponse[]>([]);
   readonly loading = signal(false);

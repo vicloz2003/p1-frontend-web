@@ -7,6 +7,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatIconModule } from '@angular/material/icon';
 import { ReactiveFormsModule } from '@angular/forms';
 import { Department } from '../../../core/models/domain';
+import { environment } from '../../../../environments/environment';
 
 export interface IaDialogData {
   departments: Department[];
@@ -78,7 +79,7 @@ export class IaDialogComponent {
   async generate(): Promise<void> {
     this.loading.set(true);
     try {
-      const response = await fetch('http://34.237.109.152:8000/api/ia/generate-diagram', {
+      const response = await fetch(`${environment.iaUrl}/api/ia/generate-diagram`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

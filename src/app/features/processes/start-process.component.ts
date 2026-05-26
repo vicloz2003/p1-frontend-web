@@ -7,6 +7,7 @@ import {
 } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { environment } from '../../../environments/environment';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -176,7 +177,7 @@ export class StartProcessComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly snack = inject(MatSnackBar);
 
-  private readonly API = 'http://34.237.109.152:3000/api/v1';
+  private readonly API = environment.apiUrl;
 
   readonly policies = signal<BusinessPolicy[]>([]);
   readonly loading = signal(false);

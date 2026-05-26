@@ -1,12 +1,13 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { switchMap, map } from 'rxjs/operators';
+import { switchMap } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class FileUploadService {
   private readonly http = inject(HttpClient);
-  private readonly API = 'http://34.237.109.152:3000/api/v1';
+  private readonly API = environment.apiUrl;
 
   uploadFile(file: File): Observable<string> {
     return this.http.get<{ uploadUrl: string; publicUrl: string }>(

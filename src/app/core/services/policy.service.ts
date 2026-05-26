@@ -3,11 +3,12 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { CreatePolicyRequest,UpdatePolicyRequest } from '../models/requests';
 import { PolicyResponse } from '../models/responses';
+import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class PolicyService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = 'http://34.237.109.152:3000/api/v1/policies';
+  private readonly baseUrl = `${environment.apiUrl}/policies`;
 
   createPolicy(data: CreatePolicyRequest): Observable<PolicyResponse> {
     return this.http.post<PolicyResponse>(this.baseUrl, data);

@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
+import { environment } from '../../../../environments/environment';
 import { DatePipe } from '@angular/common';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -121,7 +122,7 @@ export class TaskCompleteComponent implements OnInit {
   protected readonly router = inject(Router);
   protected readonly snack = inject(MatSnackBar);
 
-  private readonly API = 'http://34.237.109.152:3000/api/v1';
+  private readonly API = environment.apiUrl;
 
   readonly task = signal<TaskResponse | null>(null);
   readonly submitting = signal(false);

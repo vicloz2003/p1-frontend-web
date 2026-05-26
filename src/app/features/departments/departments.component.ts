@@ -6,6 +6,7 @@ import {
   signal,
 } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../environments/environment';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
@@ -78,7 +79,7 @@ export class DepartmentsComponent implements OnInit {
   private readonly dialog = inject(MatDialog);
   private readonly snack = inject(MatSnackBar);
 
-  private readonly API = 'http://34.237.109.152:3000/api/v1/departments';
+  private readonly API = `${environment.apiUrl}/departments`;
 
   readonly departments = signal<Department[]>([]);
   readonly loading = signal(false);
