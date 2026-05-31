@@ -104,5 +104,24 @@ export const routes: Routes = [
     canActivate: [authGuard, roleGuard],
     data: { role: 'EMPLOYEE' },
   },
+  {
+    path: 'profile',
+    loadComponent: () =>
+      import('./features/profile/profile.component').then(m => m.ProfileComponent),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'agente',
+    loadComponent: () =>
+      import('./features/agent/agent.component').then(m => m.AgentComponent),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'documents/:id/edit',
+    loadComponent: () =>
+      import('./features/documents/onlyoffice-editor.component')
+        .then(m => m.OnlyOfficeEditorComponent),
+    canActivate: [authGuard],
+  },
   { path: '**', redirectTo: 'login' },
 ];
