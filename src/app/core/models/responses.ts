@@ -1,4 +1,4 @@
-import { ActivityNode, ActivityPartition, ControlFlow } from './domain';
+import { ActivityNode, ActivityPartition, ControlFlow, DocumentRequirement } from './domain';
 import { InstanceStatus, PolicyStatus, SystemRole, TaskStatus } from './enums';
 
 export interface BottleneckResponse {
@@ -18,6 +18,35 @@ export interface LoginResponse {
   expiresIn: number;
 }
 
+export interface NodeProgressItem {
+  nodeId: string;
+  nodeLabel: string;
+  departmentName: string | null;
+  status: 'PENDING' | 'CURRENT' | 'COMPLETED';
+  completedAt: string | null;
+}
+
+export interface DocumentResponse {
+  id: string;
+  processInstanceId: string | null;
+  businessPolicyId: string;
+  documentRequirementId: string | null;
+  fileName: string;
+  mimeType: string;
+  uploadedBy: string;
+  uploadedByRole: string;
+  status: 'PENDING_UPLOAD' | 'CONFIRMED' | 'DELETED';
+  uploadedAt: string;
+  confirmedAt: string | null;
+  taskId: string | null;
+}
+
+export interface DocumentUploadInitiateResponse {
+  documentId: string;
+  s3Key: string;
+  presignedUrl: string;
+}
+
 export interface PolicyResponse {
   id: string;
   name: string;
@@ -27,6 +56,8 @@ export interface PolicyResponse {
   partitions: ActivityPartition[];
   nodes: ActivityNode[];
   flows: ControlFlow[];
+  documentRequirements?: DocumentRequirement[];
+  tags?: string[];
   bpmnXml?: string;
   createdAt: string;
   updatedAt: string;
@@ -34,10 +65,17 @@ export interface PolicyResponse {
 
 export interface ProcessStatusResponse {
   processInstanceId: string;
+  businessPolicyId: string;
   currentNodeId: string;
+  currentNodeLabel: string | null;
+  currentDepartmentId: string | null;
+  currentDepartmentName: string | null;
   status: InstanceStatus;
   startedAt: string;
+  completedAt: string | null;
   clientId: string | null;
+  policyName: string;
+  nodeProgress: NodeProgressItem[];
 }
 
 export interface RefreshResponse {
@@ -74,6 +112,8 @@ export interface TaskResponse {
   status: TaskStatus;
   formSchema: Record<string, unknown>;
   assignedAt: string;
+  claimedAt: string | null;
+  policyName: string | null;
 }
 
 export interface UserResponse {

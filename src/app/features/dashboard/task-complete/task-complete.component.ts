@@ -1,7 +1,6 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  computed,
   inject,
   OnInit,
   signal,
@@ -13,15 +12,42 @@ import { DatePipe } from '@angular/common';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormlyFieldConfig, FormlyModule } from '@ngx-formly/core';
 import { FormlyMaterialModule } from '@ngx-formly/material';
-import { TaskResponse } from '../../../core/models/responses';
+import { PolicyResponse, ProcessStatusResponse, TaskResponse } from '../../../core/models/responses';
+import { DocumentRequirement } from '../../../core/models/domain';
+import { DocumentService } from '../../../core/services/document.service';
 import { FormField, FormSchema } from '../../designer/models/form-schema.models';
+
+interface DocUploadState {
+  requirementId: string;
+  name: string;
+  mandatory: boolean;
+  status: 'PENDING' | 'UPLOADING' | 'CONFIRMED';
+  documentId: string | null;
+  error: string | null;
+}
+
+interface InitiateUploadRequest {
+  processInstanceId: string;
+  documentRequirementId: string;
+  fileName: string;
+  mimeType: string;
+  taskId: string;
+}
+
+interface DocumentUploadInitiateResponse {
+  documentId: string;
+  s3Key: string;
+  presignedUrl: string;
+}
 
 @Component({
   selector: 'app-task-complete',
@@ -31,18 +57,18 @@ import { FormField, FormSchema } from '../../designer/models/form-schema.models'
     FormlyMaterialModule,
     MatToolbarModule,
     MatButtonModule,
-    MatIconModule,
     MatCardModule,
+    MatDividerModule,
+    MatIconModule,
     MatProgressBarModule,
+    MatProgressSpinnerModule,
     MatSnackBarModule,
     MatTooltipModule,
     DatePipe,
   ],
   template: `
     <mat-toolbar>
-      <button mat-icon-button
-              (click)="router.navigate(['/dashboard'])"
-              matTooltip="Volver">
+      <button mat-icon-button (click)="router.navigate(['/dashboard'])" matTooltip="Volver">
         <mat-icon>arrow_back</mat-icon>
       </button>
       <span>Completar Tarea</span>
@@ -52,45 +78,95 @@ import { FormField, FormSchema } from '../../designer/models/form-schema.models'
 
       @if (task(); as t) {
 
+        <!-- Task info card -->
         <mat-card appearance="outlined" style="margin-bottom:24px;">
           <mat-card-header>
-            <mat-card-title>{{ t.nodeId }}</mat-card-title>
-            <mat-card-subtitle>
-              Trámite: {{ t.processInstanceId }}
-            </mat-card-subtitle>
+            <mat-card-title>{{ t.nodeLabel }}</mat-card-title>
+            <mat-card-subtitle>Trámite: {{ t.processInstanceId }}</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content style="padding-top:8px;">
-            <p style="margin:0; font-size:0.85rem;
-                      color:var(--mat-sys-on-surface-variant);">
+            <p style="margin:0; font-size:0.85rem; color:var(--mat-sys-on-surface-variant);">
               Asignado: {{ t.assignedAt | date:'dd/MM/yyyy HH:mm' }}
             </p>
           </mat-card-content>
         </mat-card>
 
+        <!-- Document requirements for this node -->
+        @if (nodeDocRequirements().length > 0) {
+          <mat-card appearance="outlined" style="margin-bottom:24px;">
+            <mat-card-header>
+              <mat-card-title style="font-size:1rem;">
+                <mat-icon>description</mat-icon>
+                Documentos requeridos
+              </mat-card-title>
+            </mat-card-header>
+            <mat-card-content style="padding-top:16px;">
+              @for (req of nodeDocRequirements(); track req.id) {
+                @let state = docStates().get(req.id);
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;
+                            padding:10px 12px; border-radius:8px;
+                            background:var(--mat-sys-surface-variant);">
+
+                  @if (state?.status === 'CONFIRMED') {
+                    <mat-icon style="color:var(--mat-sys-primary);">check_circle</mat-icon>
+                  } @else if (state?.status === 'UPLOADING') {
+                    <mat-progress-spinner diameter="24" mode="indeterminate"></mat-progress-spinner>
+                  } @else {
+                    <mat-icon style="color:var(--mat-sys-outline);">
+                      {{ req.mandatory ? 'error_outline' : 'upload_file' }}
+                    </mat-icon>
+                  }
+
+                  <div style="flex:1; min-width:0;">
+                    <p style="margin:0; font-size:0.9rem; font-weight:500;">
+                      {{ req.name }}
+                      @if (req.mandatory) {
+                        <span style="color:var(--mat-sys-error); font-size:0.75rem; margin-left:4px;">
+                          *obligatorio
+                        </span>
+                      }
+                    </p>
+                    @if (req.description) {
+                      <p style="margin:2px 0 0; font-size:0.78rem;
+                                color:var(--mat-sys-on-surface-variant);">{{ req.description }}</p>
+                    }
+                    @if (state?.error) {
+                      <p style="margin:2px 0 0; font-size:0.78rem; color:var(--mat-sys-error);">
+                        {{ state!.error }}
+                      </p>
+                    }
+                  </div>
+
+                  @if (state?.status === 'CONFIRMED') {
+                    <span style="font-size:0.8rem; color:var(--mat-sys-primary); white-space:nowrap;">
+                      Cargado
+                    </span>
+                  } @else if (state?.status !== 'UPLOADING') {
+                    <button mat-stroked-button (click)="triggerFileInput(req)">
+                      <mat-icon>upload</mat-icon> Cargar
+                    </button>
+                  }
+                </div>
+              }
+            </mat-card-content>
+          </mat-card>
+        }
+
+        <!-- Form card -->
         <mat-card appearance="outlined">
           <mat-card-header>
-            <mat-card-title style="font-size:1rem;">
-              Datos del formulario
-            </mat-card-title>
+            <mat-card-title style="font-size:1rem;">Datos del formulario</mat-card-title>
           </mat-card-header>
           <mat-card-content style="padding-top:16px;">
-
             @if (fields().length === 0) {
-              <p style="color:var(--mat-sys-on-surface-variant);
-                        text-align:center; padding:16px 0;">
-                Esta tarea no tiene campos de formulario.
-                Puedes completarla directamente.
+              <p style="color:var(--mat-sys-on-surface-variant); text-align:center; padding:16px 0;">
+                Esta tarea no tiene campos de formulario. Puedes completarla directamente.
               </p>
             } @else {
               <form [formGroup]="form">
-                <formly-form
-                  [form]="form"
-                  [fields]="fields()"
-                  [model]="model">
-                </formly-form>
+                <formly-form [form]="form" [fields]="fields()" [model]="model"></formly-form>
               </form>
             }
-
           </mat-card-content>
           <mat-card-actions align="end" style="padding:16px; gap:8px;">
             <button mat-stroked-button
@@ -100,7 +176,8 @@ import { FormField, FormSchema } from '../../designer/models/form-schema.models'
             </button>
             <button mat-flat-button color="primary"
                     (click)="submit()"
-                    [disabled]="form.invalid || submitting()">
+                    [disabled]="form.invalid || submitting() || !allMandatoryDocsDone()"
+                    [matTooltip]="!allMandatoryDocsDone() ? 'Carga todos los documentos obligatorios' : ''">
               @if (submitting()) {
                 <mat-icon>hourglass_empty</mat-icon> Enviando…
               } @else {
@@ -113,6 +190,8 @@ import { FormField, FormSchema } from '../../designer/models/form-schema.models'
       }
 
     </div>
+
+    <input #fileInput type="file" style="display:none;" (change)="onFileSelected($event)">
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -121,28 +200,140 @@ export class TaskCompleteComponent implements OnInit {
   protected readonly route = inject(ActivatedRoute);
   protected readonly router = inject(Router);
   protected readonly snack = inject(MatSnackBar);
+  private readonly docService = inject(DocumentService);
 
   private readonly API = environment.apiUrl;
 
   readonly task = signal<TaskResponse | null>(null);
   readonly submitting = signal(false);
+  readonly nodeDocRequirements = signal<DocumentRequirement[]>([]);
+  readonly docStates = signal<Map<string, DocUploadState>>(new Map());
 
   readonly form = new FormGroup({});
   model: Record<string, unknown> = {};
   readonly fields = signal<FormlyFieldConfig[]>([]);
 
+  private pendingUploadReq: DocumentRequirement | null = null;
+  private fileInputEl: HTMLInputElement | null = null;
+
   ngOnInit(): void {
     const taskFromState = this.router.lastSuccessfulNavigation()?.extras?.state?.['task'] as TaskResponse | undefined;
-
     if (taskFromState) {
       this.task.set(taskFromState);
       this.fields.set(this.buildFields(taskFromState));
+      this.loadNodeDocRequirements(taskFromState);
     } else {
-      this.snack.open('Sesión de tarea expirada, vuelve al dashboard', 'OK', {
-        duration: 4000
-      });
+      this.snack.open('Sesión de tarea expirada, vuelve al dashboard', 'OK', { duration: 4000 });
       this.router.navigate(['/dashboard']);
     }
+  }
+
+  allMandatoryDocsDone(): boolean {
+    const mandatory = this.nodeDocRequirements().filter(r => r.mandatory);
+    if (mandatory.length === 0) return true;
+    const states = this.docStates();
+    return mandatory.every(r => states.get(r.id)?.status === 'CONFIRMED');
+  }
+
+  triggerFileInput(req: DocumentRequirement): void {
+    this.pendingUploadReq = req;
+    if (!this.fileInputEl) {
+      this.fileInputEl = document.querySelector('input[type="file"]') as HTMLInputElement;
+    }
+    if (this.fileInputEl) {
+      this.fileInputEl.accept = req.allowedMimeTypes?.join(',') ?? '';
+      this.fileInputEl.value = '';
+      this.fileInputEl.click();
+    }
+  }
+
+  onFileSelected(event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    const req = this.pendingUploadReq;
+    const task = this.task();
+    if (!file || !req || !task) return;
+
+    this.pendingUploadReq = null;
+    this.setDocState(req.id, { status: 'UPLOADING', error: null });
+
+    this.http.post<DocumentUploadInitiateResponse>(
+      `${this.API}/documents/initiate`,
+      {
+        processInstanceId: task.processInstanceId,
+        documentRequirementId: req.id,
+        fileName: file.name,
+        mimeType: file.type || 'application/octet-stream',
+        taskId: task.id,
+      } satisfies InitiateUploadRequest
+    ).subscribe({
+      next: initRes => {
+        this.docService.uploadToS3(initRes.presignedUrl, file).subscribe({
+          next: () => {
+            this.docService.confirmUpload(initRes.documentId).subscribe({
+              next: confirmed => {
+                this.setDocState(req.id, {
+                  status: 'CONFIRMED',
+                  documentId: confirmed.id,
+                  error: null,
+                });
+              },
+              error: () => this.setDocState(req.id, {
+                status: 'PENDING',
+                error: 'Error al confirmar el archivo.',
+              }),
+            });
+          },
+          error: () => this.setDocState(req.id, {
+            status: 'PENDING',
+            error: 'Error al subir a S3.',
+          }),
+        });
+      },
+      error: () => this.setDocState(req.id, {
+        status: 'PENDING',
+        error: 'Error al iniciar la carga.',
+      }),
+    });
+  }
+
+  private setDocState(reqId: string, partial: Partial<DocUploadState>): void {
+    const map = new Map(this.docStates());
+    const current = map.get(reqId);
+    if (current) {
+      map.set(reqId, { ...current, ...partial });
+      this.docStates.set(map);
+    }
+  }
+
+  private loadNodeDocRequirements(task: TaskResponse): void {
+    this.http.get<ProcessStatusResponse>(`${this.API}/processes/${task.processInstanceId}/status`)
+      .subscribe({
+        next: status => {
+          if (!status.businessPolicyId) return;
+          this.http.get<PolicyResponse>(`${this.API}/policies/${status.businessPolicyId}`)
+            .subscribe({
+              next: policy => {
+                const nodeReqs = (policy.documentRequirements ?? [])
+                  .filter(r => r.uploadStage === task.nodeId);
+                this.nodeDocRequirements.set(nodeReqs);
+                const map = new Map<string, DocUploadState>();
+                nodeReqs.forEach(r => {
+                  map.set(r.id, {
+                    requirementId: r.id,
+                    name: r.name,
+                    mandatory: r.mandatory,
+                    status: 'PENDING',
+                    documentId: null,
+                    error: null,
+                  });
+                });
+                this.docStates.set(map);
+              },
+              error: () => { /* non-critical */ }
+            });
+        },
+        error: () => { /* non-critical */ }
+      });
   }
 
   private buildFields(task: TaskResponse): FormlyFieldConfig[] {
@@ -152,10 +343,7 @@ export class TaskCompleteComponent implements OnInit {
     return schema.fields.map((field: FormField): FormlyFieldConfig => {
       const base: FormlyFieldConfig = {
         key: field.id,
-        props: {
-          label: field.label,
-          required: field.required,
-        },
+        props: { label: field.label, required: field.required },
       };
 
       switch (field.type) {
@@ -180,10 +368,7 @@ export class TaskCompleteComponent implements OnInit {
           return {
             ...base,
             type: 'file-upload',
-            props: {
-              label: field.label,
-              required: field.required,
-            },
+            props: { label: field.label, required: field.required },
           };
         case 'SIGNATURE':
           return {
@@ -210,11 +395,7 @@ export class TaskCompleteComponent implements OnInit {
       .subscribe({
         next: () => {
           this.submitting.set(false);
-          this.snack.open(
-            '¡Tarea completada! El motor ha avanzado el trámite.',
-            'OK',
-            { duration: 4000 }
-          );
+          this.snack.open('¡Tarea completada! El motor ha avanzado el trámite.', 'OK', { duration: 4000 });
           this.router.navigate(['/dashboard']);
         },
         error: () => {

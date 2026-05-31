@@ -87,22 +87,30 @@ import { TaskResponse, TaskNotificationDto } from '../../core/models/responses';
 
         @for (task of pendingTasks(); track task.id) {
           <mat-card appearance="outlined"
-                    style="margin-bottom:12px;
-                           border-left:4px solid #f44336;">
+                    style="margin-bottom:12px; border-left:4px solid #f44336;">
             <mat-card-header>
               <mat-card-title style="font-size:1rem;">
                 {{ task.nodeLabel || task.nodeId }}
               </mat-card-title>
               <mat-card-subtitle>
-                Trámite: {{ task.processInstanceId | slice:0:8 }}…
+                @if (task.policyName) {
+                  <span style="font-weight:500; color:var(--mat-sys-primary);">
+                    {{ task.policyName }}
+                  </span><br>
+                }
+                <span [matTooltip]="task.processInstanceId"
+                      style="cursor:default; font-family:monospace; font-size:0.78rem;">
+                  Trámite: {{ task.processInstanceId | slice:0:12 }}…
+                </span>
               </mat-card-subtitle>
               <mat-chip-set>
                 <mat-chip color="warn">Pendiente</mat-chip>
               </mat-chip-set>
             </mat-card-header>
             <mat-card-content style="padding-top:8px;">
-              <p style="margin:0; font-size:0.85rem;
+              <p style="margin:0; font-size:0.82rem;
                         color:var(--mat-sys-on-surface-variant);">
+                <mat-icon style="font-size:14px; vertical-align:middle;">schedule</mat-icon>
                 Asignado: {{ task.assignedAt | date:'dd/MM/yyyy HH:mm' }}
               </p>
             </mat-card-content>
@@ -151,21 +159,42 @@ import { TaskResponse, TaskNotificationDto } from '../../core/models/responses';
 
         @for (task of inProgressTasks(); track task.id) {
           <mat-card appearance="outlined"
-            style="margin-bottom:12px;
-                   border-left:4px solid #ff9800;">
+            style="margin-bottom:12px; border-left:4px solid #ff9800;">
             <mat-card-header>
               <mat-card-title style="font-size:1rem;">
                 {{ task.nodeLabel || task.nodeId }}
               </mat-card-title>
               <mat-card-subtitle>
-                Trámite: {{ task.processInstanceId | slice:0:8 }}…
+                @if (task.policyName) {
+                  <span style="font-weight:500; color:var(--mat-sys-primary);">
+                    {{ task.policyName }}
+                  </span><br>
+                }
+                <span [matTooltip]="task.processInstanceId"
+                      style="cursor:default; font-family:monospace; font-size:0.78rem;">
+                  Trámite: {{ task.processInstanceId | slice:0:12 }}…
+                </span>
               </mat-card-subtitle>
               <mat-chip-set>
                 <mat-chip color="primary" highlighted>En progreso</mat-chip>
               </mat-chip-set>
             </mat-card-header>
+            <mat-card-content style="padding-top:8px;">
+              <p style="margin:0; font-size:0.82rem;
+                        color:var(--mat-sys-on-surface-variant);">
+                <mat-icon style="font-size:14px; vertical-align:middle;">schedule</mat-icon>
+                Asignado: {{ task.assignedAt | date:'dd/MM/yyyy HH:mm' }}
+              </p>
+              @if (task.claimedAt) {
+                <p style="margin:4px 0 0; font-size:0.82rem;
+                          color:#e65100;">
+                  <mat-icon style="font-size:14px; vertical-align:middle;">person_pin</mat-icon>
+                  Reclamado: {{ task.claimedAt | date:'dd/MM/yyyy HH:mm' }}
+                </p>
+              }
+            </mat-card-content>
             <mat-card-actions align="end">
-              <button mat-stroked-button color="primary"
+              <button mat-flat-button color="warn"
                       (click)="router.navigate(['/task', task.id], { state: { task } })">
                 <mat-icon>edit_note</mat-icon> Completar
               </button>
@@ -204,25 +233,28 @@ import { TaskResponse, TaskNotificationDto } from '../../core/models/responses';
 
         @for (task of completedTasks(); track task.id) {
           <mat-card appearance="outlined"
-            style="margin-bottom:12px;
-                   border-left:4px solid #4caf50;
-                   opacity:0.8;">
+            style="margin-bottom:12px; border-left:4px solid #4caf50; opacity:0.85;">
             <mat-card-header>
-              <mat-card-title style="font-size:1rem;">
+              <mat-card-title style="font-size:0.95rem;">
                 {{ task.nodeLabel || task.nodeId }}
               </mat-card-title>
               <mat-card-subtitle>
-                Trámite: {{ task.processInstanceId | slice:0:8 }}…
+                @if (task.policyName) {
+                  <span style="font-weight:500;">{{ task.policyName }}</span><br>
+                }
+                <span [matTooltip]="task.processInstanceId"
+                      style="cursor:default; font-family:monospace; font-size:0.78rem;">
+                  Trámite: {{ task.processInstanceId | slice:0:12 }}…
+                </span>
               </mat-card-subtitle>
               <mat-chip-set>
-                <mat-chip style="background:#4caf50; color:white;">
-                  Completado
-                </mat-chip>
+                <mat-chip style="background:#4caf50; color:white;">Completado</mat-chip>
               </mat-chip-set>
             </mat-card-header>
             <mat-card-content style="padding-top:8px;">
-              <p style="margin:0; font-size:0.85rem;
+              <p style="margin:0; font-size:0.82rem;
                         color:var(--mat-sys-on-surface-variant);">
+                <mat-icon style="font-size:14px; vertical-align:middle;">check_circle</mat-icon>
                 Completado: {{ task.assignedAt | date:'dd/MM/yyyy HH:mm' }}
               </p>
             </mat-card-content>
