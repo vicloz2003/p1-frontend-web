@@ -25,115 +25,109 @@ import { PolicyService } from '../../core/services/policy.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     DatePipe,
-    MatTableModule,
     MatButtonModule,
     MatIconModule,
-    MatToolbarModule,
-    MatProgressBarModule,
     MatSnackBarModule,
-    MatChipsModule,
     MatTooltipModule,
   ],
   template: `
-    <mat-toolbar color="primary">
-      <span>Políticas de Negocio</span>
-      <span style="flex:1"></span>
-      <button mat-flat-button (click)="goToDesigner()">
+    <!-- ── Page header ── -->
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Políticas de Negocio</h1>
+        <p class="page-subtitle">{{ policies().length }} política{{ policies().length !== 1 ? 's' : '' }} registrada{{ policies().length !== 1 ? 's' : '' }}</p>
+      </div>
+      <button class="btn btn-primary" (click)="goToDesigner()">
         <mat-icon>add</mat-icon>
         Nueva política
       </button>
-    </mat-toolbar>
+    </div>
 
+    <!-- ── Loading bar ── -->
     @if (loading()) {
-      <mat-progress-bar mode="indeterminate" />
-    }
-
-    <mat-table [dataSource]="policies()" style="width:100%;">
-
-      <ng-container matColumnDef="name">
-        <mat-header-cell *matHeaderCellDef>Nombre</mat-header-cell>
-        <mat-cell *matCellDef="let policy">{{ policy.name }}</mat-cell>
-      </ng-container>
-
-      <ng-container matColumnDef="status">
-        <mat-header-cell *matHeaderCellDef>Estado</mat-header-cell>
-        <mat-cell *matCellDef="let policy">
-          <mat-chip-set>
-            @if (policy.status === 'ACTIVE') {
-              <mat-chip color="primary" highlighted>{{ policy.status }}</mat-chip>
-            } @else if (policy.status === 'DEPRECATED') {
-              <mat-chip color="warn">{{ policy.status }}</mat-chip>
-            } @else {
-              <mat-chip>{{ policy.status }}</mat-chip>
-            }
-          </mat-chip-set>
-        </mat-cell>
-      </ng-container>
-
-      <ng-container matColumnDef="createdAt">
-        <mat-header-cell *matHeaderCellDef>Creada</mat-header-cell>
-        <mat-cell *matCellDef="let policy">{{ policy.createdAt | date:'dd/MM/yyyy' }}</mat-cell>
-      </ng-container>
-
-      <ng-container matColumnDef="updatedAt">
-        <mat-header-cell *matHeaderCellDef>Actualizada</mat-header-cell>
-        <mat-cell *matCellDef="let policy">{{ policy.updatedAt | date:'dd/MM/yyyy' }}</mat-cell>
-      </ng-container>
-
-      <ng-container matColumnDef="actions">
-        <mat-header-cell *matHeaderCellDef>Acciones</mat-header-cell>
-        <mat-cell *matCellDef="let policy">
-          <button mat-icon-button
-                  (click)="editPolicy(policy)"
-                  matTooltip="Editar política">
-            <mat-icon>edit</mat-icon>
-          </button>
-
-          @if (policy.status === 'DRAFT') {
-            <button mat-icon-button
-                    [disabled]="publishing() === policy.id"
-                    (click)="publishPolicy(policy)"
-                    matTooltip="Publicar política">
-              <mat-icon>publish</mat-icon>
-            </button>
-          }
-
-          @if (policy.status === 'DRAFT') {
-            <button mat-icon-button color="warn"
-                    (click)="deletePolicy(policy)"
-                    [disabled]="deleting() === policy.id"
-                    matTooltip="Eliminar política">
-              <mat-icon>delete_outline</mat-icon>
-            </button>
-          }
-
-          @if (policy.status === 'ACTIVE') {
-            <button mat-icon-button
-                    (click)="router.navigate(['/processes'], { queryParams: { policyId: policy.id } })"
-                    matTooltip="Ver trámites">
-              <mat-icon>visibility</mat-icon>
-            </button>
-          }
-        </mat-cell>
-      </ng-container>
-
-      <mat-header-row *matHeaderRowDef="displayedColumns" />
-      <mat-row *matRowDef="let row; columns: displayedColumns;" />
-    </mat-table>
-
-    @if (!loading() && policies().length === 0) {
-      <div style="display:flex; flex-direction:column; align-items:center;
-                  justify-content:center; gap:16px; margin-top:64px;">
-        <mat-icon style="font-size:64px; width:64px; height:64px;
-                         color: var(--mat-sys-on-surface-variant);">policy</mat-icon>
-        <p style="color: var(--mat-sys-on-surface-variant); margin:0;">
-          No hay políticas registradas
-        </p>
-        <button mat-flat-button color="primary" (click)="goToDesigner()">
-          Crear primera política
-        </button>
+      <div style="height:3px; overflow:hidden; background:#eff6ff;">
+        <div class="loading-bar" style="height:100%;"></div>
       </div>
     }
+
+    <!-- ── Table card ── -->
+    <div class="page-body">
+      <div class="card">
+        @if (!loading() && policies().length === 0) {
+          <div class="empty-state">
+            <mat-icon>policy</mat-icon>
+            <p>No hay políticas registradas todavía</p>
+            <button class="btn btn-primary" (click)="goToDesigner()">
+              <mat-icon>add</mat-icon>
+              Crear primera política
+            </button>
+          </div>
+        } @else {
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Estado</th>
+                <th>Creada</th>
+                <th>Actualizada</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (policy of policies(); track policy.id) {
+                <tr>
+                  <td>
+                    <span style="font-weight:600; color:#0f172a;">{{ policy.name }}</span>
+                  </td>
+                  <td>
+                    @if (policy.status === 'ACTIVE') {
+                      <span class="badge badge-active">{{ policy.status }}</span>
+                    } @else if (policy.status === 'DEPRECATED') {
+                      <span class="badge badge-deprecated">{{ policy.status }}</span>
+                    } @else {
+                      <span class="badge badge-draft">{{ policy.status }}</span>
+                    }
+                  </td>
+                  <td style="color:#64748b;">{{ policy.createdAt | date:'dd/MM/yyyy' }}</td>
+                  <td style="color:#64748b;">{{ policy.updatedAt | date:'dd/MM/yyyy' }}</td>
+                  <td>
+                    <div style="display:flex; gap:4px; align-items:center;">
+                      <button class="btn-icon" (click)="editPolicy(policy)"
+                              matTooltip="Editar política">
+                        <mat-icon>edit</mat-icon>
+                      </button>
+
+                      @if (policy.status === 'ACTIVE') {
+                        <button class="btn-icon"
+                                (click)="router.navigate(['/processes'], { queryParams: { policyId: policy.id } })"
+                                matTooltip="Ver trámites">
+                          <mat-icon>visibility</mat-icon>
+                        </button>
+                      }
+
+                      @if (policy.status === 'DRAFT') {
+                        <button class="btn-icon"
+                                [disabled]="publishing() === policy.id"
+                                (click)="publishPolicy(policy)"
+                                matTooltip="Publicar política">
+                          <mat-icon>publish</mat-icon>
+                        </button>
+                        <button class="btn-icon btn-icon-danger"
+                                (click)="deletePolicy(policy)"
+                                [disabled]="deleting() === policy.id"
+                                matTooltip="Eliminar política">
+                          <mat-icon>delete_outline</mat-icon>
+                        </button>
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+    </div>
   `,
 })
 export class PoliciesComponent implements OnInit {

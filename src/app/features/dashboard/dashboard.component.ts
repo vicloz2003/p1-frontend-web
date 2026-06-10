@@ -10,13 +10,9 @@ import {
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
-import { DatePipe, SlicePipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { Subscription } from 'rxjs';
-import { MatCardModule } from '@angular/material/card';
-import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -28,257 +24,179 @@ import { TaskResponse, TaskNotificationDto } from '../../core/models/responses';
 @Component({
   selector: 'app-dashboard',
   imports: [
-    MatCardModule,
-    MatButtonModule,
     MatIconModule,
-    MatChipsModule,
-    MatProgressBarModule,
     MatSnackBarModule,
     MatDialogModule,
     MatTooltipModule,
     MatBadgeModule,
     DatePipe,
-    SlicePipe,
   ],
   template: `
-    <div style="display:flex; align-items:center;
-                justify-content:space-between; padding:24px 24px 0;">
+    <!-- Header -->
+    <div class="page-header">
       <div>
-        <h1 style="margin:0; font-size:1.75rem; font-weight:600;">
-          Mis Tareas
-        </h1>
-        <p style="margin:4px 0 0;
-                  color:var(--mat-sys-on-surface-variant);">
-          {{ auth.currentUser()?.username }} —
-          {{ auth.currentUser()?.role }}
-        </p>
+        <h1 class="page-title">Mis Tareas</h1>
+        <p class="page-subtitle">{{ auth.currentUser()?.username }} · Funcionario</p>
       </div>
-      <button mat-icon-button (click)="onRefresh()"
-              [disabled]="loading()"
-              matTooltip="Actualizar"
-              [matBadge]="hasNewTask() ? '!' : null"
-              matBadgeColor="warn">
+      <button class="btn-icon" (click)="onRefresh()" [disabled]="loading()" matTooltip="Actualizar"
+              [matBadge]="hasNewTask() ? '!' : null" matBadgeColor="warn">
         <mat-icon>refresh</mat-icon>
       </button>
     </div>
 
     @if (loading()) {
-      <mat-progress-bar mode="indeterminate"
-        style="margin: 8px 24px 0;" />
+      <div style="height:3px; overflow:hidden; background:#eff6ff;">
+        <div class="loading-bar" style="height:100%;"></div>
+      </div>
     }
 
-    <div style="display:grid; grid-template-columns:1fr 1fr 1fr;
-                gap:24px; padding:24px;">
+    <div style="padding:24px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; align-items:start;">
 
-      <!-- COLUMNA IZQUIERDA — Tareas PENDING -->
+      <!-- ══ DISPONIBLES ══ -->
       <div>
-        <div style="display:flex; align-items:center;
-                    gap:8px; margin-bottom:16px;">
-          <mat-icon color="warn">inbox</mat-icon>
-          <h2 style="margin:0; font-size:1.1rem;">
-            Disponibles para reclamar
-          </h2>
-          @if (pendingTasks().length > 0) {
-            <mat-chip color="warn" highlighted>
-              {{ pendingTasks().length }}
-            </mat-chip>
-          }
+        <div class="col-head">
+          <span class="col-dot" style="background:#2563eb;"></span>
+          <mat-icon style="color:#2563eb;">inbox</mat-icon>
+          <h2>Disponibles</h2>
+          <span class="col-count" style="background:#eff6ff; color:#2563eb;">{{ pendingTasks().length }}</span>
         </div>
 
         @for (task of pendingTasks(); track task.id) {
-          <mat-card appearance="outlined"
-                    style="margin-bottom:12px; border-left:4px solid #f44336;">
-            <mat-card-header>
-              <mat-card-title style="font-size:1rem;">
-                {{ task.nodeLabel || task.nodeId }}
-              </mat-card-title>
-              <mat-card-subtitle>
-                @if (task.policyName) {
-                  <span style="font-weight:500; color:var(--mat-sys-primary);">
-                    {{ task.policyName }}
-                  </span><br>
-                }
-                <span [matTooltip]="task.processInstanceId"
-                      style="cursor:default; font-family:monospace; font-size:0.78rem;">
-                  Trámite: {{ task.processInstanceId | slice:0:12 }}…
-                </span>
-              </mat-card-subtitle>
-              <mat-chip-set>
-                <mat-chip color="warn">Pendiente</mat-chip>
-              </mat-chip-set>
-            </mat-card-header>
-            <mat-card-content style="padding-top:8px;">
-              <p style="margin:0; font-size:0.82rem;
-                        color:var(--mat-sys-on-surface-variant);">
-                <mat-icon style="font-size:14px; vertical-align:middle;">schedule</mat-icon>
-                Asignado: {{ task.assignedAt | date:'dd/MM/yyyy HH:mm' }}
+          <div class="task-card" style="border-left:3px solid #2563eb;">
+            <p class="task-node">{{ task.nodeLabel || task.nodeId }}</p>
+            <p class="task-policy">{{ task.policyName || 'Trámite' }}</p>
+            @if (task.clientName) {
+              <p class="task-meta" style="color:#475569;">
+                <mat-icon class="meta-ic">person</mat-icon>
+                {{ task.clientName }}
               </p>
-            </mat-card-content>
-            <mat-card-actions align="end">
-              <button mat-flat-button color="primary"
-                      (click)="claimTask(task)"
-                      [disabled]="claiming() === task.id">
-                @if (claiming() === task.id) {
-                  Reclamando…
-                } @else {
-                  <mat-icon>assignment_ind</mat-icon> Reclamar
-                }
-              </button>
-            </mat-card-actions>
-          </mat-card>
+            }
+            <p class="task-meta">
+              <mat-icon class="meta-ic">schedule</mat-icon>
+              {{ task.assignedAt | date:'dd/MM HH:mm' }}
+            </p>
+            <button class="btn btn-primary" style="width:100%; margin-top:10px; justify-content:center;"
+                    (click)="claimTask(task)" [disabled]="claiming() === task.id">
+              @if (claiming() === task.id) { Reclamando… }
+              @else { <mat-icon>assignment_ind</mat-icon> Reclamar }
+            </button>
+          </div>
         }
-
         @if (!loading() && pendingTasks().length === 0) {
-          <mat-card appearance="outlined">
-            <mat-card-content style="text-align:center; padding:32px;">
-              <mat-icon style="font-size:48px; width:48px; height:48px;
-                        color:var(--mat-sys-on-surface-variant);">
-                done_all
-              </mat-icon>
-              <p style="color:var(--mat-sys-on-surface-variant);
-                        margin:8px 0 0;">
-                Sin tareas disponibles
-              </p>
-            </mat-card-content>
-          </mat-card>
+          <div class="empty-col"><mat-icon>done_all</mat-icon><span>Nada por reclamar</span></div>
         }
       </div>
 
-      <!-- COLUMNA DERECHA — Tareas IN_PROGRESS -->
+      <!-- ══ EN PROGRESO ══ -->
       <div>
-        <div style="display:flex; align-items:center;
-                    gap:8px; margin-bottom:16px;">
-          <mat-icon color="primary">pending_actions</mat-icon>
-          <h2 style="margin:0; font-size:1.1rem;">En progreso</h2>
-          @if (inProgressTasks().length > 0) {
-            <mat-chip color="primary" highlighted>
-              {{ inProgressTasks().length }}
-            </mat-chip>
-          }
+        <div class="col-head">
+          <span class="col-dot" style="background:#f59e0b;"></span>
+          <mat-icon style="color:#f59e0b;">pending_actions</mat-icon>
+          <h2>En progreso</h2>
+          <span class="col-count" style="background:#fffbeb; color:#d97706;">{{ inProgressTasks().length }}</span>
         </div>
 
         @for (task of inProgressTasks(); track task.id) {
-          <mat-card appearance="outlined"
-            style="margin-bottom:12px; border-left:4px solid #ff9800;">
-            <mat-card-header>
-              <mat-card-title style="font-size:1rem;">
-                {{ task.nodeLabel || task.nodeId }}
-              </mat-card-title>
-              <mat-card-subtitle>
-                @if (task.policyName) {
-                  <span style="font-weight:500; color:var(--mat-sys-primary);">
-                    {{ task.policyName }}
-                  </span><br>
-                }
-                <span [matTooltip]="task.processInstanceId"
-                      style="cursor:default; font-family:monospace; font-size:0.78rem;">
-                  Trámite: {{ task.processInstanceId | slice:0:12 }}…
-                </span>
-              </mat-card-subtitle>
-              <mat-chip-set>
-                <mat-chip color="primary" highlighted>En progreso</mat-chip>
-              </mat-chip-set>
-            </mat-card-header>
-            <mat-card-content style="padding-top:8px;">
-              <p style="margin:0; font-size:0.82rem;
-                        color:var(--mat-sys-on-surface-variant);">
-                <mat-icon style="font-size:14px; vertical-align:middle;">schedule</mat-icon>
-                Asignado: {{ task.assignedAt | date:'dd/MM/yyyy HH:mm' }}
+          <div class="task-card task-active" style="border-left:3px solid #f59e0b;">
+            <p class="task-node">{{ task.nodeLabel || task.nodeId }}</p>
+            <p class="task-policy">{{ task.policyName || 'Trámite' }}</p>
+            @if (task.clientName) {
+              <p class="task-meta" style="color:#475569;">
+                <mat-icon class="meta-ic">person</mat-icon>
+                {{ task.clientName }}
               </p>
-              @if (task.claimedAt) {
-                <p style="margin:4px 0 0; font-size:0.82rem;
-                          color:#e65100;">
-                  <mat-icon style="font-size:14px; vertical-align:middle;">person_pin</mat-icon>
-                  Reclamado: {{ task.claimedAt | date:'dd/MM/yyyy HH:mm' }}
-                </p>
-              }
-            </mat-card-content>
-            <mat-card-actions align="end">
-              <button mat-flat-button color="warn"
-                      (click)="router.navigate(['/task', task.id], { state: { task } })">
-                <mat-icon>edit_note</mat-icon> Completar
-              </button>
-            </mat-card-actions>
-          </mat-card>
+            }
+            <p class="task-meta">
+              <mat-icon class="meta-ic">schedule</mat-icon>
+              Asignado: {{ task.assignedAt | date:'dd/MM HH:mm' }}
+            </p>
+            @if (task.claimedAt) {
+              <p class="task-meta" style="color:#c2410c;">
+                <mat-icon class="meta-ic">person_pin</mat-icon>
+                Reclamado: {{ task.claimedAt | date:'dd/MM HH:mm' }}
+              </p>
+            }
+            <button class="btn btn-complete" style="width:100%; margin-top:10px; justify-content:center;"
+                    (click)="router.navigate(['/task', task.id], { state: { task } })">
+              <mat-icon>edit_note</mat-icon> Completar
+            </button>
+          </div>
         }
-
         @if (!loading() && inProgressTasks().length === 0) {
-          <mat-card appearance="outlined">
-            <mat-card-content style="text-align:center; padding:32px;">
-              <mat-icon style="font-size:48px; width:48px; height:48px;
-                        color:var(--mat-sys-on-surface-variant);">
-                task_alt
-              </mat-icon>
-              <p style="color:var(--mat-sys-on-surface-variant);
-                        margin:8px 0 0;">
-                Sin tareas en progreso
-              </p>
-            </mat-card-content>
-          </mat-card>
+          <div class="empty-col"><mat-icon>task_alt</mat-icon><span>Nada en progreso</span></div>
         }
       </div>
 
-      <!-- COLUMNA DERECHA — Tareas COMPLETED -->
+      <!-- ══ COMPLETADAS (colapsada) ══ -->
       <div>
-        <div style="display:flex; align-items:center;
-                    gap:8px; margin-bottom:16px;">
-          <mat-icon style="color:#4caf50">task_alt</mat-icon>
-          <h2 style="margin:0; font-size:1.1rem;">Completadas</h2>
-          @if (completedTasks().length > 0) {
-            <mat-chip style="background:#4caf50; color:white;" highlighted>
-              {{ completedTasks().length }}
-            </mat-chip>
-          }
+        <div class="col-head">
+          <span class="col-dot" style="background:#16a34a;"></span>
+          <mat-icon style="color:#16a34a;">task_alt</mat-icon>
+          <h2>Completadas</h2>
+          <span class="col-count" style="background:#f0fdf4; color:#16a34a;">{{ completedTasks().length }}</span>
         </div>
 
-        @for (task of completedTasks(); track task.id) {
-          <mat-card appearance="outlined"
-            style="margin-bottom:12px; border-left:4px solid #4caf50; opacity:0.85;">
-            <mat-card-header>
-              <mat-card-title style="font-size:0.95rem;">
-                {{ task.nodeLabel || task.nodeId }}
-              </mat-card-title>
-              <mat-card-subtitle>
-                @if (task.policyName) {
-                  <span style="font-weight:500;">{{ task.policyName }}</span><br>
+        @for (task of visibleCompleted(); track task.id) {
+          <div class="task-card task-done">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <mat-icon style="color:#16a34a; font-size:18px; width:18px; height:18px;">check_circle</mat-icon>
+              <div style="flex:1; min-width:0;">
+                <p class="task-node" style="font-size:0.9rem; margin:0;">{{ task.nodeLabel || task.nodeId }}</p>
+                <p class="task-policy" style="margin:1px 0 0;">{{ task.policyName }}</p>
+                @if (task.clientName) {
+                  <p class="task-meta" style="font-size:0.75rem; margin:2px 0 0; color:#64748b;">
+                    <mat-icon class="meta-ic" style="font-size:12px; width:12px; height:12px;">person</mat-icon>
+                    {{ task.clientName }}
+                  </p>
                 }
-                <span [matTooltip]="task.processInstanceId"
-                      style="cursor:default; font-family:monospace; font-size:0.78rem;">
-                  Trámite: {{ task.processInstanceId | slice:0:12 }}…
-                </span>
-              </mat-card-subtitle>
-              <mat-chip-set>
-                <mat-chip style="background:#4caf50; color:white;">Completado</mat-chip>
-              </mat-chip-set>
-            </mat-card-header>
-            <mat-card-content style="padding-top:8px;">
-              <p style="margin:0; font-size:0.82rem;
-                        color:var(--mat-sys-on-surface-variant);">
-                <mat-icon style="font-size:14px; vertical-align:middle;">check_circle</mat-icon>
-                Completado: {{ task.assignedAt | date:'dd/MM/yyyy HH:mm' }}
-              </p>
-            </mat-card-content>
-          </mat-card>
+              </div>
+              <span style="font-size:0.72rem; color:#94a3b8; white-space:nowrap;">
+                {{ task.assignedAt | date:'dd/MM' }}
+              </span>
+            </div>
+          </div>
         }
 
+        @if (completedTasks().length > collapsedLimit) {
+          <button class="btn btn-ghost" style="width:100%; justify-content:center; margin-top:4px;"
+                  (click)="showAllCompleted.set(!showAllCompleted())">
+            @if (showAllCompleted()) {
+              <mat-icon>expand_less</mat-icon> Ver menos
+            } @else {
+              <mat-icon>expand_more</mat-icon> Ver todas ({{ completedTasks().length }})
+            }
+          </button>
+        }
         @if (!loading() && completedTasks().length === 0) {
-          <mat-card appearance="outlined">
-            <mat-card-content style="text-align:center; padding:32px;">
-              <mat-icon style="font-size:48px; width:48px; height:48px;
-                        color:var(--mat-sys-on-surface-variant);">
-                hourglass_empty
-              </mat-icon>
-              <p style="color:var(--mat-sys-on-surface-variant);
-                        margin:8px 0 0;">
-                Sin tareas completadas
-              </p>
-            </mat-card-content>
-          </mat-card>
+          <div class="empty-col"><mat-icon>hourglass_empty</mat-icon><span>Aún sin completar</span></div>
         }
       </div>
 
     </div>
   `,
+  styles: [`
+    .col-head { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
+    .col-head h2 { margin:0; font-family:var(--font-display); font-size:1.02rem; font-weight:700; color:#0f172a; }
+    .col-head mat-icon { font-size:20px; width:20px; height:20px; }
+    .col-dot { width:8px; height:8px; border-radius:50%; }
+    .col-count { margin-left:auto; font-size:0.78rem; font-weight:700; padding:2px 9px; border-radius:20px; }
+    .task-card { background:#fff; border:1px solid var(--card-border); border-radius:10px;
+                 padding:14px; margin-bottom:10px; }
+    .task-active { box-shadow:0 2px 10px rgba(245,158,11,0.10); }
+    .task-done { padding:10px 12px; background:#fafdfb; }
+    .task-node { margin:0; font-weight:700; font-size:0.95rem; color:#0f172a;
+                 font-family:var(--font-display); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .task-policy { margin:2px 0 0; font-size:0.8rem; color:#2563eb; font-weight:600;
+                   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .task-meta { margin:8px 0 0; font-size:0.78rem; color:#64748b; display:flex; align-items:center; gap:5px; }
+    .meta-ic { font-size:14px !important; width:14px !important; height:14px !important; }
+    .btn-complete { background:#f59e0b; color:#fff; }
+    .btn-complete:hover { background:#d97706; }
+    .empty-col { text-align:center; padding:36px 16px; color:#94a3b8;
+                 border:1px dashed var(--card-border); border-radius:10px; }
+    .empty-col mat-icon { font-size:40px; width:40px; height:40px; color:#cbd5e1; }
+    .empty-col span { display:block; margin-top:8px; font-size:0.85rem; }
+  `],
   changeDetection: ChangeDetectionStrategy.Default,
 })
 export class DashboardComponent implements OnInit, OnDestroy {
@@ -306,6 +224,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.tasks().filter(t => t.status === 'COMPLETED')
   );
   readonly hasNewTask = signal(false);
+
+  // Completed column starts collapsed so it never buries the actionable columns.
+  readonly collapsedLimit = 5;
+  readonly showAllCompleted = signal(false);
+  readonly visibleCompleted = computed(() => {
+    const all = this.completedTasks();
+    return this.showAllCompleted() ? all : all.slice(0, this.collapsedLimit);
+  });
 
   ngOnInit(): void {
     this.loadTasks();

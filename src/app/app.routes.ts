@@ -57,6 +57,20 @@ export const routes: Routes = [
     data: { role: 'ADMIN_DESIGNER' },
   },
   {
+    path: 'risk',
+    loadComponent: () =>
+      import('./features/risk/risk.component').then(m => m.RiskComponent),
+    canActivate: [authGuard, roleGuard],
+    data: { role: 'ADMIN_DESIGNER' },
+  },
+  {
+    path: 'reports',
+    loadComponent: () =>
+      import('./features/reports/reports.component').then(m => m.ReportsComponent),
+    canActivate: [authGuard, roleGuard],
+    data: { role: 'ADMIN_DESIGNER' },
+  },
+  {
     path: 'processes',
     loadComponent: () =>
       import('./features/processes/process-list.component')
@@ -115,6 +129,22 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/agent/agent.component').then(m => m.AgentComponent),
     canActivate: [authGuard],
+  },
+  {
+    path: 'documents',
+    loadComponent: () =>
+      import('./features/documents/document-admin.component')
+        .then(m => m.DocumentAdminComponent),
+    canActivate: [authGuard, roleGuard],
+    data: { role: 'ADMIN_DESIGNER' },
+  },
+  {
+    path: 'my-documents',
+    loadComponent: () =>
+      import('./features/documents/my-department-docs.component')
+        .then(m => m.MyDepartmentDocsComponent),
+    canActivate: [authGuard, roleGuard],
+    data: { role: 'EMPLOYEE' },
   },
   {
     path: 'documents/:id/edit',

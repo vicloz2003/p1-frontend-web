@@ -1,27 +1,38 @@
-<mat-toolbar color="primary">
-  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+<mat-toolbar color="primary" style="height:auto; min-height:64px; flex-wrap:wrap; gap:8px; padding:8px 16px;">
+  <mat-form-field appearance="outline" subscriptSizing="dynamic" style="min-width:220px;">
     <mat-label>Nombre de la política</mat-label>
     <input matInput [value]="policyName()" (input)="onNameInput($event)" />
   </mat-form-field>
   <span style="flex: 1"></span>
+
   <button mat-stroked-button
           (click)="openIaDialog()"
-          style="margin-right:8px;"
           matTooltip="Generar diagrama con IA">
     <mat-icon>auto_awesome</mat-icon>
     Generar con IA
   </button>
+
+  <button mat-stroked-button
+          (click)="openDocumentRequirementsDialog()"
+          matTooltip="Gestionar requisitos de documentos">
+    <mat-icon>description</mat-icon>
+    Requisitos docs
+  </button>
+
   @if (policyId()) {
     <button mat-stroked-button
             (click)="startCollaboration()"
             [disabled]="collaborating"
-            style="margin-right:8px;"
             matTooltip="Activar edición colaborativa">
       <mat-icon>group</mat-icon>
       {{ collaborating ? 'Colaborando' : 'Colaborar' }}
     </button>
   }
-  <button mat-raised-button (click)="savePolicy()">Guardar Política</button>
+
+  <button mat-raised-button color="accent" (click)="savePolicy()">
+    <mat-icon>save</mat-icon>
+    Guardar Política
+  </button>
 </mat-toolbar>
 
 <div class="designer-body">

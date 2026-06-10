@@ -4,7 +4,7 @@ import { InstanceStatus, PolicyStatus, SystemRole, TaskStatus } from './enums';
 export interface BottleneckResponse {
   nodeId: string;
   nodeLabel: string;
-  averageDurationSeconds: number;
+  averageDurationHours: number;
 }
 
 export interface LoginResponse {
@@ -26,6 +26,12 @@ export interface NodeProgressItem {
   completedAt: string | null;
 }
 
+export interface DocumentPermissions {
+  canRead: string[] | null;
+  canWrite: string[] | null;
+  canDelete: string[] | null;
+}
+
 export interface DocumentResponse {
   id: string;
   processInstanceId: string | null;
@@ -36,9 +42,24 @@ export interface DocumentResponse {
   uploadedBy: string;
   uploadedByRole: string;
   status: 'PENDING_UPLOAD' | 'CONFIRMED' | 'DELETED';
+  permissions: DocumentPermissions | null;
   uploadedAt: string;
   confirmedAt: string | null;
   taskId: string | null;
+}
+
+export interface AuditLogResponse {
+  id: string;
+  documentId: string;
+  processInstanceId: string | null;
+  userId: string;
+  userRole: string | null;
+  action: 'VIEW' | 'DOWNLOAD' | 'UPLOAD' | 'REPLACE' | 'DELETE'
+        | 'PERMISSION_CHANGE' | 'PERMISSION_CHECK_FAILED';
+  timestamp: string;
+  ipAddress: string | null;
+  detail: string | null;
+  userName: string | null;
 }
 
 export interface DocumentUploadInitiateResponse {
@@ -76,6 +97,8 @@ export interface ProcessStatusResponse {
   clientId: string | null;
   policyName: string;
   nodeProgress: NodeProgressItem[];
+  progressPercent: number;
+  pendingClientAction: string | null;
 }
 
 export interface RefreshResponse {
@@ -114,6 +137,7 @@ export interface TaskResponse {
   assignedAt: string;
   claimedAt: string | null;
   policyName: string | null;
+  clientName: string | null;
 }
 
 export interface UserResponse {

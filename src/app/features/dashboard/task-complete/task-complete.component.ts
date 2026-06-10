@@ -9,7 +9,9 @@ import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { environment } from '../../../../environments/environment';
 import { DatePipe } from '@angular/common';
-import { FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { FormGroup, ReactiveFormsModule, FormsModule } from '@angular/forms';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -21,7 +23,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormlyFieldConfig, FormlyModule } from '@ngx-formly/core';
 import { FormlyMaterialModule } from '@ngx-formly/material';
-import { PolicyResponse, ProcessStatusResponse, TaskResponse } from '../../../core/models/responses';
+import { PolicyResponse, ProcessStatusResponse, TaskResponse, DocumentResponse } from '../../../core/models/responses';
 import { DocumentRequirement } from '../../../core/models/domain';
 import { DocumentService } from '../../../core/services/document.service';
 import { FormField, FormSchema } from '../../designer/models/form-schema.models';
@@ -52,18 +54,12 @@ interface DocumentUploadInitiateResponse {
 @Component({
   selector: 'app-task-complete',
   imports: [
-    ReactiveFormsModule,
-    FormlyModule,
-    FormlyMaterialModule,
-    MatToolbarModule,
-    MatButtonModule,
-    MatCardModule,
-    MatDividerModule,
-    MatIconModule,
-    MatProgressBarModule,
-    MatProgressSpinnerModule,
-    MatSnackBarModule,
-    MatTooltipModule,
+    ReactiveFormsModule, FormsModule,
+    FormlyModule, FormlyMaterialModule,
+    MatToolbarModule, MatButtonModule, MatCardModule,
+    MatDividerModule, MatIconModule, MatProgressBarModule,
+    MatProgressSpinnerModule, MatSnackBarModule, MatTooltipModule,
+    MatFormFieldModule, MatInputModule,
     DatePipe,
   ],
   template: `
@@ -90,6 +86,50 @@ interface DocumentUploadInitiateResponse {
             </p>
           </mat-card-content>
         </mat-card>
+
+        <!-- Documentos del cliente (subidos al iniciar el trámite) -->
+        @if (clientDocs().length > 0) {
+          <mat-card appearance="outlined" style="margin-bottom:24px;">
+            <mat-card-header>
+              <mat-card-title style="font-size:1rem; display:flex; align-items:center; gap:8px;">
+                <mat-icon style="color:#1976d2;">folder_shared</mat-icon>
+                Documentos del cliente
+              </mat-card-title>
+              <mat-card-subtitle>Subidos al iniciar el trámite — revisar antes de completar</mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-content style="padding-top:12px;">
+              @for (doc of clientDocs(); track doc.id) {
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;
+                            padding:10px 12px; border-radius:8px;
+                            background:var(--mat-sys-surface-variant);">
+                  <mat-icon style="color:#4caf50;">check_circle</mat-icon>
+                  <div style="flex:1; min-width:0;">
+                    <p style="margin:0; font-size:0.9rem; font-weight:500; overflow:hidden;
+                              text-overflow:ellipsis; white-space:nowrap;">
+                      {{ doc.fileName }}
+                    </p>
+                    <p style="margin:2px 0 0; font-size:0.75rem;
+                              color:var(--mat-sys-on-surface-variant);">
+                      {{ doc.mimeType }}
+                    </p>
+                  </div>
+                  @if (isOfficeEditable(doc.fileName)) {
+                    <button mat-icon-button color="primary"
+                            matTooltip="Editar en Office (OnlyOffice)"
+                            (click)="editInOffice(doc.id)">
+                      <mat-icon>edit_document</mat-icon>
+                    </button>
+                  }
+                  <button mat-icon-button
+                          matTooltip="Descargar"
+                          (click)="downloadClientDoc(doc.id)">
+                    <mat-icon>download</mat-icon>
+                  </button>
+                </div>
+              }
+            </mat-card-content>
+          </mat-card>
+        }
 
         <!-- Document requirements for this node -->
         @if (nodeDocRequirements().length > 0) {
@@ -152,6 +192,52 @@ interface DocumentUploadInitiateResponse {
           </mat-card>
         }
 
+        <!-- Elaborar documento colaborativo (RF-1.10) -->
+        <mat-card appearance="outlined" style="margin-bottom:24px;">
+          <mat-card-header>
+            <mat-card-title style="font-size:1rem; display:flex; align-items:center; gap:8px;">
+              <mat-icon style="color:#00897b;">note_add</mat-icon>
+              Elaborar documento
+            </mat-card-title>
+            <mat-card-subtitle>
+              Crea un documento en blanco y llénalo con tu departamento en simultáneo
+            </mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content style="padding-top:16px;">
+            <mat-form-field appearance="outline" style="width:100%;" subscriptSizing="dynamic">
+              <mat-label>Nombre del documento</mat-label>
+              <input matInput [(ngModel)]="newDocName"
+                     placeholder="Ej: Contrato de préstamo, Acta de revisión…"
+                     [disabled]="creating()">
+              <mat-icon matSuffix>edit</mat-icon>
+            </mat-form-field>
+            <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:12px; align-items:center;">
+              <button mat-flat-button color="primary"
+                      [disabled]="creating() || !newDocName.trim()"
+                      (click)="createDoc('WORD')">
+                @if (creating() && creatingKind === 'WORD') {
+                  <mat-progress-spinner diameter="18" mode="indeterminate"
+                    style="display:inline-block; margin-right:6px;"></mat-progress-spinner>
+                } @else {
+                  <mat-icon>description</mat-icon>
+                }
+                Word (.docx)
+              </button>
+              <button mat-flat-button color="accent"
+                      [disabled]="creating() || !newDocName.trim()"
+                      (click)="createDoc('CELL')">
+                @if (creating() && creatingKind === 'CELL') {
+                  <mat-progress-spinner diameter="18" mode="indeterminate"
+                    style="display:inline-block; margin-right:6px;"></mat-progress-spinner>
+                } @else {
+                  <mat-icon>table_chart</mat-icon>
+                }
+                Excel (.xlsx)
+              </button>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
         <!-- Form card -->
         <mat-card appearance="outlined">
           <mat-card-header>
@@ -206,7 +292,11 @@ export class TaskCompleteComponent implements OnInit {
 
   readonly task = signal<TaskResponse | null>(null);
   readonly submitting = signal(false);
-  readonly nodeDocRequirements = signal<DocumentRequirement[]>([]);
+  readonly creating = signal(false);
+  newDocName = '';
+  creatingKind: 'WORD' | 'CELL' = 'WORD';
+  readonly nodeDocRequirements = signal<DocumentRequirement[]>([]);  // docs que el empleado debe subir en este nodo
+  readonly clientDocs = signal<DocumentResponse[]>([]);              // docs ya subidos por el cliente (PROCESS_START)
   readonly docStates = signal<Map<string, DocUploadState>>(new Map());
 
   readonly form = new FormGroup({});
@@ -306,6 +396,14 @@ export class TaskCompleteComponent implements OnInit {
   }
 
   private loadNodeDocRequirements(task: TaskResponse): void {
+    // 1. Documentos ya subidos por el cliente para este proceso
+    this.http.get<DocumentResponse[]>(`${this.API}/processes/${task.processInstanceId}/documents`)
+      .subscribe({
+        next: docs => this.clientDocs.set(docs),
+        error: () => { /* non-critical */ }
+      });
+
+    // 2. Requisitos documentales que el empleado debe subir en ESTE nodo específico
     this.http.get<ProcessStatusResponse>(`${this.API}/processes/${task.processInstanceId}/status`)
       .subscribe({
         next: status => {
@@ -313,6 +411,7 @@ export class TaskCompleteComponent implements OnInit {
           this.http.get<PolicyResponse>(`${this.API}/policies/${status.businessPolicyId}`)
             .subscribe({
               next: policy => {
+                // Filtra sólo los requisitos asignados a este nodo (uploadStage = nodeId del nodo actual)
                 const nodeReqs = (policy.documentRequirements ?? [])
                   .filter(r => r.uploadStage === task.nodeId);
                 this.nodeDocRequirements.set(nodeReqs);
@@ -334,6 +433,54 @@ export class TaskCompleteComponent implements OnInit {
         },
         error: () => { /* non-critical */ }
       });
+  }
+
+  /** RF-1.10: el funcionario crea un Word/Excel con nombre personalizado y lo abre para co-editar. */
+  createDoc(kind: 'WORD' | 'CELL'): void {
+    const t = this.task();
+    const name = this.newDocName.trim();
+    if (!t || this.creating() || !name) return;
+    this.creating.set(true);
+    this.creatingKind = kind;
+    this.docService.createBlank({
+      processInstanceId: t.processInstanceId,
+      taskId: t.id,
+      nodeId: t.nodeId,
+      fileName: name,
+      kind,
+    }).subscribe({
+      next: doc => {
+        this.creating.set(false);
+        this.newDocName = '';
+        this.router.navigate(['/documents', doc.id, 'edit']);
+      },
+      error: () => {
+        this.creating.set(false);
+        this.snack.open('No se pudo crear el documento', 'OK', { duration: 3000 });
+      },
+    });
+  }
+
+  /** OnlyOffice solo edita formatos ofimáticos; muestra el botón "Editar" únicamente para esos. */
+  isOfficeEditable(fileName: string): boolean {
+    return /\.(docx?|xlsx?|pptx?|odt|ods|odp|csv|txt|rtf)$/i.test(fileName ?? '');
+  }
+
+  editInOffice(documentId: string): void {
+    this.router.navigate(['/documents', documentId, 'edit']);
+  }
+
+  downloadClientDoc(documentId: string): void {
+    this.docService.download(documentId).subscribe({
+      next: ({ presignedUrl, fileName }) => {
+        const a = document.createElement('a');
+        a.href = presignedUrl;
+        a.download = fileName;
+        a.target = '_blank';
+        a.click();
+      },
+      error: () => this.snack.open('No se pudo descargar el documento', 'OK', { duration: 3000 }),
+    });
   }
 
   private buildFields(task: TaskResponse): FormlyFieldConfig[] {

@@ -1,41 +1,134 @@
-<mat-toolbar color="primary">
-  <span style="font-weight:700; font-size:1.2rem;">iBPMS</span>
+<mat-sidenav-container style="height:100vh;">
 
-  @if (role() === 'EMPLOYEE') {
-    <a mat-button routerLink="/dashboard">
-      <mat-icon>dashboard</mat-icon> Dashboard
-    </a>
-    <a mat-button routerLink="/start-process">
-      <mat-icon>add_circle</mat-icon> Iniciar Trámite
-    </a>
-  }
+  <!-- ══ Sidenav ══════════════════════════════════════════════════════ -->
+  <mat-sidenav #sidenav mode="side" [opened]="!!role()" style="width:248px; padding:0;">
 
-  @if (role() === 'ADMIN_DESIGNER') {
-    <a mat-button routerLink="/policies">
-      <mat-icon>policy</mat-icon> Políticas
-    </a>
-    <a mat-button routerLink="/designer">
-      <mat-icon>edit</mat-icon> Diseñador
-    </a>
-    <a mat-button routerLink="/departments">
-      <mat-icon>business</mat-icon> Departamentos
-    </a>
-    <a mat-button routerLink="/users">
-      <mat-icon>group</mat-icon> Usuarios
-    </a>
-    <a mat-button routerLink="/analytics">
-      <mat-icon>bar_chart</mat-icon> Analítica
-    </a>
-  }
+    <!-- Brand -->
+    <div style="padding:20px 16px 16px; border-bottom:1px solid rgba(255,255,255,0.07);">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div style="width:36px; height:36px; border-radius:9px; background:linear-gradient(135deg,#2563eb,#3b82f6);
+                    display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+          <mat-icon style="font-size:20px; width:20px; height:20px; color:white;">account_tree</mat-icon>
+        </div>
+        <div>
+          <p style="margin:0; font-family:'Sora',sans-serif; font-weight:700; font-size:1rem; color:#f1f5f9;">
+            iBPMS
+          </p>
+          <p style="margin:0; font-size:0.7rem; color:#475569; font-family:'DM Sans',sans-serif;">
+            {{ role() }}
+          </p>
+        </div>
+      </div>
+    </div>
 
-  <span style="flex: 1 1 auto"></span>
+    <!-- ── ADMIN_DESIGNER nav ── -->
+    @if (role() === 'ADMIN_DESIGNER') {
+      <div style="padding:8px 0; overflow-y:auto; flex:1;">
 
-  @if (role()) {
-    <button mat-button (click)="logout()">
-      <mat-icon>logout</mat-icon> Cerrar sesión
-    </button>
-  }
-</mat-toolbar>
+        <span class="nav-section-label">Gestión</span>
+        <a class="nav-item" routerLink="/policies" routerLinkActive="nav-active">
+          <mat-icon>policy</mat-icon>Políticas
+        </a>
+        <a class="nav-item" routerLink="/designer" routerLinkActive="nav-active">
+          <mat-icon>edit</mat-icon>Diseñador
+        </a>
+        <a class="nav-item" routerLink="/departments" routerLinkActive="nav-active">
+          <mat-icon>business</mat-icon>Departamentos
+        </a>
+        <a class="nav-item" routerLink="/users" routerLinkActive="nav-active">
+          <mat-icon>group</mat-icon>Usuarios
+        </a>
 
-<router-outlet />
+        <span class="nav-section-label">Documentos</span>
+        <a class="nav-item" routerLink="/documents" routerLinkActive="nav-active">
+          <mat-icon>folder_managed</mat-icon>Gestión Documental
+        </a>
 
+        <span class="nav-section-label">Analítica</span>
+        <a class="nav-item" routerLink="/analytics" routerLinkActive="nav-active">
+          <mat-icon>bar_chart</mat-icon>Dashboard KPI
+        </a>
+        <a class="nav-item" routerLink="/processes" routerLinkActive="nav-active">
+          <mat-icon>account_tree</mat-icon>Trámites
+        </a>
+
+        <span class="nav-section-label">Inteligencia</span>
+        <a class="nav-item" routerLink="/risk" routerLinkActive="nav-active">
+          <mat-icon>emergency</mat-icon>Motor de Riesgos
+        </a>
+        <a class="nav-item" routerLink="/reports" routerLinkActive="nav-active">
+          <mat-icon>auto_awesome</mat-icon>Reportes IA
+        </a>
+      </div>
+    }
+
+    <!-- ── EMPLOYEE nav ── -->
+    @if (role() === 'EMPLOYEE') {
+      <div style="padding:8px 0; overflow-y:auto; flex:1;">
+        <span class="nav-section-label">Trabajo</span>
+        <a class="nav-item" routerLink="/dashboard" routerLinkActive="nav-active">
+          <mat-icon>dashboard</mat-icon>Mis Tareas
+        </a>
+        <a class="nav-item" routerLink="/start-process" routerLinkActive="nav-active">
+          <mat-icon>add_circle</mat-icon>Iniciar Trámite
+        </a>
+        <a class="nav-item" routerLink="/my-documents" routerLinkActive="nav-active">
+          <mat-icon>folder_shared</mat-icon>Docs de mi depto.
+        </a>
+        <a class="nav-item" routerLink="/agente" routerLinkActive="nav-active">
+          <mat-icon>smart_toy</mat-icon>Asistente IA
+        </a>
+      </div>
+    }
+
+    <!-- ── CLIENT nav ── -->
+    @if (role() === 'CLIENT') {
+      <div style="padding:8px 0; overflow-y:auto; flex:1;">
+        <span class="nav-section-label">Servicios</span>
+        <a class="nav-item" routerLink="/agente" routerLinkActive="nav-active">
+          <mat-icon>smart_toy</mat-icon>Asistente IA
+        </a>
+        <a class="nav-item" routerLink="/start-process" routerLinkActive="nav-active">
+          <mat-icon>add_circle</mat-icon>Iniciar Trámite
+        </a>
+      </div>
+    }
+
+    <!-- ── FCM status badge ── -->
+    @if (role()) {
+      <div style="margin:8px 12px 4px; padding:10px 12px; border-radius:9px;
+                  background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.18);">
+        <div style="display:flex; align-items:center; gap:7px; margin-bottom:3px;">
+          <div style="width:7px; height:7px; border-radius:50%; background:#22c55e;
+                      box-shadow:0 0 0 2px rgba(34,197,94,0.25);"></div>
+          <span style="font-size:0.72rem; font-weight:600; color:#93c5fd; font-family:'DM Sans',sans-serif;">
+            Push Notifications activas
+          </span>
+        </div>
+        <p style="margin:0; font-size:0.65rem; color:#475569; font-family:'DM Sans',sans-serif; padding-left:14px;">
+          Firebase FCM — Fase 0.5
+        </p>
+      </div>
+    }
+
+    <!-- ── Bottom actions ── -->
+    <div style="border-top:1px solid rgba(255,255,255,0.07); padding:8px 0; margin-top:4px;">
+      @if (role()) {
+        <a class="nav-item" routerLink="/profile" routerLinkActive="nav-active">
+          <mat-icon>account_circle</mat-icon>Mi Perfil
+        </a>
+        <button class="nav-item" (click)="logout()"
+                style="color:#f87171; cursor:pointer;">
+          <mat-icon style="color:#f87171;">logout</mat-icon>Cerrar sesión
+        </button>
+      }
+    </div>
+
+  </mat-sidenav>
+
+  <!-- ══ Main content ══════════════════════════════════════════════ -->
+  <mat-sidenav-content style="background:#f8fafc;">
+    <router-outlet />
+  </mat-sidenav-content>
+
+</mat-sidenav-container>

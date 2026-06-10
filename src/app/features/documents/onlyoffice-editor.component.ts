@@ -6,7 +6,8 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
+import { Location } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -38,30 +39,38 @@ interface DocsAPILike {
       <span>Edición colaborativa</span>
     </mat-toolbar>
 
-    @if (loading()) {
-      <div style="display:flex; flex-direction:column; align-items:center; gap:12px; padding:48px;">
-        <mat-spinner diameter="40"></mat-spinner>
-        <span>Cargando editor…</span>
-      </div>
-    }
+    <!-- The editor host must keep a real, non-collapsing height at all times: OnlyOffice
+         sizes its iframe to the host's height at construction. Loader/error are overlays so
+         the host is never display:none (which would give the iframe height 0). -->
+    <div style="position:relative; height:calc(100vh - 64px);">
 
-    @if (error(); as e) {
-      <div role="alert" style="padding:32px; text-align:center; color:var(--mat-sys-error);">
-        <mat-icon style="font-size:48px; height:48px; width:48px;">error_outline</mat-icon>
-        <p>{{ e }}</p>
-        <button mat-stroked-button (click)="back()">Volver</button>
-      </div>
-    }
+      @if (loading()) {
+        <div style="position:absolute; inset:0; z-index:2; display:flex; flex-direction:column;
+                    align-items:center; justify-content:center; gap:12px;
+                    background:var(--mat-sys-surface);">
+          <mat-spinner diameter="40"></mat-spinner>
+          <span>Cargando editor…</span>
+        </div>
+      }
 
-    <!-- DocsAPI replaces the contents of this element with an iframe -->
-    <div id="onlyoffice-editor"
-         [style.display]="ready() ? 'block' : 'none'"
-         style="height:calc(100vh - 64px);"></div>
+      @if (error(); as e) {
+        <div role="alert" style="position:absolute; inset:0; z-index:2; display:flex;
+                    flex-direction:column; align-items:center; justify-content:center; gap:12px;
+                    text-align:center; color:var(--mat-sys-error); background:var(--mat-sys-surface);">
+          <mat-icon style="font-size:48px; height:48px; width:48px;">error_outline</mat-icon>
+          <p>{{ e }}</p>
+          <button mat-stroked-button (click)="back()">Volver</button>
+        </div>
+      }
+
+      <!-- DocsAPI replaces the contents of this element with a full-size iframe -->
+      <div id="onlyoffice-editor" style="width:100%; height:100%;"></div>
+    </div>
   `,
 })
 export class OnlyOfficeEditorComponent implements OnDestroy {
   private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
+  private readonly location = inject(Location);
   private readonly onlyOffice = inject(OnlyOfficeService);
 
   protected readonly loading = signal(true);
@@ -88,10 +97,11 @@ export class OnlyOfficeEditorComponent implements OnDestroy {
           const docsApi = (window as unknown as { DocsAPI?: DocsAPILike }).DocsAPI;
           if (!docsApi) throw new Error('El editor OnlyOffice no está disponible');
           this.loading.set(false);
-          // Must run after the container is visible (ready()), so defer to the next frame.
-          queueMicrotask(() => {
+          // Mount after two animation frames so the host element has its final laid-out
+          // height — OnlyOffice sizes its iframe from the host at construction time.
+          requestAnimationFrame(() => requestAnimationFrame(() => {
             this.editor = new docsApi.DocEditor('onlyoffice-editor', res.config);
-          });
+          }));
         } catch (err) {
           this.error.set(err instanceof Error ? err.message : 'Error al abrir el editor');
           this.loading.set(false);
@@ -107,7 +117,7 @@ export class OnlyOfficeEditorComponent implements OnDestroy {
   }
 
   protected back(): void {
-    this.router.navigate(['/dashboard']);
+    this.location.back();
   }
 
   ngOnDestroy(): void {

@@ -52,6 +52,17 @@ export interface ProcessInstance {
   completedAt: string | null;
 }
 
+export interface DocumentRequirement {
+  id: string;
+  name: string;
+  description: string | null;
+  allowedMimeTypes: string[];
+  mandatory: boolean;
+  uploadStage: string;
+  uploaderRole: string;
+  maxSizeBytes: number | null;
+}
+
 export interface BusinessPolicy {
   id: string;
   name: string;
@@ -61,6 +72,8 @@ export interface BusinessPolicy {
   partitions: ActivityPartition[];
   nodes: ActivityNode[];
   flows: ControlFlow[];
+  documentRequirements?: DocumentRequirement[];
+  tags?: string[];
   createdAt: string;
   updatedAt: string;
 }

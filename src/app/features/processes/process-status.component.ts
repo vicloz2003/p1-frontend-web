@@ -22,6 +22,7 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { WebSocketService } from '../../core/websocket/websocket.service';
 import { ProcessStatusResponse } from '../../core/models/responses';
+import { RouteAdvisoryCardComponent } from './route-advisory-card.component';
 
 @Component({
   selector: 'app-process-status',
@@ -38,6 +39,7 @@ import { ProcessStatusResponse } from '../../core/models/responses';
     MatListModule,
     MatDividerModule,
     MatTooltipModule,
+    RouteAdvisoryCardComponent,
   ],
   template: `
     <mat-toolbar>
@@ -72,11 +74,16 @@ import { ProcessStatusResponse } from '../../core/models/responses';
                 {{ s.status }}
               </mat-chip>
               <span style="font-size:0.9rem; color:var(--mat-sys-on-surface-variant);">
-                Nodo actual: {{ s.currentNodeId }}
+                Etapa actual: {{ s.currentNodeLabel || s.currentNodeId }}
               </span>
             </div>
           </mat-card-content>
         </mat-card>
+
+        <!-- Sugerencia de ruta DL (advisory, fail-silent si no aplica) -->
+        @if (s.status === 'ACTIVE') {
+          <app-route-advisory-card [instanceId]="s.processInstanceId" />
+        }
 
         <mat-card appearance="outlined">
           <mat-card-header>
@@ -94,8 +101,8 @@ import { ProcessStatusResponse } from '../../core/models/responses';
               <mat-divider></mat-divider>
               <mat-list-item>
                 <mat-icon matListItemIcon>account_tree</mat-icon>
-                <span matListItemTitle>Nodo actual</span>
-                <span matListItemLine>{{ s.currentNodeId }}</span>
+                <span matListItemTitle>Etapa actual</span>
+                <span matListItemLine>{{ s.currentNodeLabel || s.currentNodeId }}</span>
               </mat-list-item>
               <mat-divider></mat-divider>
               <mat-list-item>

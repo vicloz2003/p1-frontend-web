@@ -21,11 +21,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import BpmnModeler, { BpmnElement, ElementRegistry } from 'bpmn-js/lib/Modeler';
-import { ActivityNode, ActivityPartition, ControlFlow, Department } from '../../core/models/domain';
+import { ActivityNode, ActivityPartition, ControlFlow, Department, DocumentRequirement } from '../../core/models/domain';
 import { NodeType } from '../../core/models/enums';
 import { CreatePolicyRequest, UpdatePolicyRequest } from '../../core/models/requests';
 import { PolicyResponse } from '../../core/models/responses';
 import { PolicyService } from '../../core/services/policy.service';
+import { DocumentRequirementsDialogComponent, DocumentRequirementsDialogData } from './document-requirements-dialog/document-requirements-dialog.component';
 import { FormEditorDialogComponent } from './form-editor-dialog/form-editor-dialog.component';
 import { GuardConditionDialogComponent } from './guard-condition-dialog/guard-condition-dialog.component';
 import { INITIAL_BPMN_TEMPLATE } from './initial-template';
@@ -78,6 +79,7 @@ export class DesignerComponent implements OnDestroy {
   readonly isEditMode = computed(() => this.policyId() !== null);
   readonly departments = signal<Department[]>([]);
   readonly lanes = signal<ActivityPartition[]>([]);
+  readonly documentRequirements = signal<DocumentRequirement[]>([]);
 
   private modeler!: BpmnModeler;
   private readonly laneToDepart = new Map<string, string>();
@@ -94,13 +96,20 @@ export class DesignerComponent implements OnDestroy {
   private readonly collabSubs: Subscription[] = [];
 
   constructor() {
+    // Read the policy id from the route immediately (independent of the canvas /
+    // modeler lifecycle) so edit-mode UI (e.g. the "Requisitos docs" button) is
+    // enabled right away instead of depending on afterNextRender timing.
+    const routeId = this.route.snapshot.paramMap.get('id');
+    if (routeId) {
+      this.policyId.set(routeId);
+    }
+
     afterNextRender(async () => {
       const container = this.canvas()?.nativeElement;
       if (container) {
         this.modeler = new BpmnModeler({ container, additionalModules: [CustomParallelGatewayModule] });
-        const id = this.route.snapshot.paramMap.get('id');
+        const id = this.policyId();
         if (id) {
-          this.policyId.set(id);
           this.loadPolicy(id);
         } else {
           try {
@@ -221,7 +230,7 @@ export class DesignerComponent implements OnDestroy {
     this.laneToDepart.set(event.laneId, event.departmentId);
   }
 
-  async savePolicy(): Promise<void> {
+  async savePolicy(onCreated?: (id: string) => void): Promise<void> {
     if (!this.modeler) return;
     const { xml } = await this.modeler.saveXML({ format: true });
 
@@ -278,6 +287,20 @@ export class DesignerComponent implements OnDestroy {
       departmentId: this.laneToDepart.get(p.id) ?? '',
     }));
 
+    // Validación: todos los nodos ACTION deben tener un nombre
+    const ACTION_TYPES = new Set(['bpmn:Task', 'bpmn:UserTask', 'bpmn:ServiceTask']);
+    const unnamedActions = elements.filter(
+      el => ACTION_TYPES.has(el.businessObject.$type) && !el.businessObject.name?.trim()
+    );
+    if (unnamedActions.length > 0) {
+      this.snackBar.open(
+        `${unnamedActions.length} nodo(s) sin nombre. Todos los pasos deben tener un nombre antes de guardar.`,
+        'OK',
+        { duration: 5000 }
+      );
+      return;
+    }
+
     const unassigned = enrichedPartitions.filter(p => p.departmentId === '');
     if (unassigned.length > 0) {
       this.snackBar.open(
@@ -310,6 +333,7 @@ export class DesignerComponent implements OnDestroy {
         next: (response) => {
           this.policyId.set(response.id);
           this.snackBar.open('Política guardada', 'OK', { duration: 3000 });
+          onCreated?.(response.id);
         },
         error: (err) => this.snackBar.open(err.error?.message ?? 'Error al guardar', 'OK', { duration: 3000 }),
       });
@@ -338,6 +362,7 @@ export class DesignerComponent implements OnDestroy {
         policy.partitions.forEach(partition => {
           this.laneToDepart.set(partition.id, partition.departmentId);
         });
+        this.documentRequirements.set(policy.documentRequirements ?? []);
         this.refreshLanes();
         this.refreshNodeMarkers();
         if (this.departments().length === 0) {
@@ -461,6 +486,54 @@ export class DesignerComponent implements OnDestroy {
       'OK',
       { duration: 4000 }
     );
+  }
+
+  openDocumentRequirementsDialog(): void {
+    const policyId = this.policyId();
+    if (!policyId) {
+      // La política aún no fue guardada: guardar primero y abrir al completar
+      this.savePolicy((newId) => this.openDocReqDialogWithId(newId));
+      return;
+    }
+    this.openDocReqDialogWithId(policyId);
+  }
+
+  private openDocReqDialogWithId(policyId: string): void {
+    const actionNodes = (this.lanes().length > 0 ? this.getActionNodes() : []);
+
+    this.dialog.open(DocumentRequirementsDialogComponent, {
+      data: {
+        policyId,
+        requirements: this.documentRequirements(),
+        actionNodes,
+      } satisfies DocumentRequirementsDialogData,
+      width: '660px',
+      maxHeight: '90vh',
+    }).afterClosed().subscribe(() => {
+      // Reload policy to sync documentRequirements signal with server state
+      this.policyService.getById(policyId).subscribe(p => {
+        this.documentRequirements.set(p.documentRequirements ?? []);
+      });
+    });
+  }
+
+  private getActionNodes(): ActivityNode[] {
+    if (!this.modeler) return [];
+    const registry: ElementRegistry = this.modeler.get('elementRegistry');
+    return registry.getAll()
+      .filter(el =>
+        el.businessObject.$type === 'bpmn:Task' ||
+        el.businessObject.$type === 'bpmn:UserTask' ||
+        el.businessObject.$type === 'bpmn:ServiceTask'
+      )
+      .map(el => ({
+        id: el.id,
+        label: el.businessObject.name ?? '',
+        partitionId: '',
+        type: 'ACTION' as const,
+        formSchema: {},
+        metadata: {},
+      }));
   }
 
   ngOnDestroy(): void {

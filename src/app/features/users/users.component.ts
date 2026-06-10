@@ -8,15 +8,9 @@ import {
 import { HttpClient } from '@angular/common/http';
 import { forkJoin } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { MatButtonModule } from '@angular/material/button';
-import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatTableModule } from '@angular/material/table';
-import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatTooltipModule } from '@angular/material/tooltip';
 import { Department } from '../../core/models/domain';
 import { UserResponse } from '../../core/models/responses';
 
@@ -28,115 +22,102 @@ interface AssignDepartmentRequest {
   selector: 'app-users',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    MatTableModule,
-    MatButtonModule,
     MatIconModule,
-    MatToolbarModule,
-    MatProgressBarModule,
     MatSnackBarModule,
-    MatChipsModule,
     MatSelectModule,
-    MatTooltipModule,
   ],
   template: `
-    <mat-toolbar>
-      <span>Gestión de Usuarios</span>
-      <span style="flex:1"></span>
-      <button mat-icon-button (click)="ngOnInit()" matTooltip="Actualizar">
+    <!-- ── Page header ── -->
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Gestión de Usuarios</h1>
+        <p class="page-subtitle">
+          {{ users().length }} usuario{{ users().length !== 1 ? 's' : '' }} registrado{{ users().length !== 1 ? 's' : '' }}
+        </p>
+      </div>
+      <button class="btn-icon" (click)="ngOnInit()" title="Actualizar lista">
         <mat-icon>refresh</mat-icon>
       </button>
-    </mat-toolbar>
+    </div>
 
+    <!-- ── Loading bar ── -->
     @if (loading()) {
-      <mat-progress-bar mode="indeterminate"></mat-progress-bar>
-    }
-
-    @if (!loading() && users().length === 0) {
-      <div style="display:flex; flex-direction:column; align-items:center;
-                  justify-content:center; padding:64px 0; gap:16px;">
-        <mat-icon style="font-size:64px; width:64px; height:64px; color:#9e9e9e;">
-          group
-        </mat-icon>
-        <span style="font-size:1.1rem; color:#616161;">
-          No hay usuarios registrados
-        </span>
+      <div style="height:3px; overflow:hidden; background:#eff6ff;">
+        <div class="loading-bar" style="height:100%;"></div>
       </div>
     }
 
-    @if (users().length > 0) {
-      <table mat-table [dataSource]="users()" style="width:100%;">
-
-        <!-- username -->
-        <ng-container matColumnDef="username">
-          <th mat-header-cell *matHeaderCellDef>Usuario</th>
-          <td mat-cell *matCellDef="let user">{{ user.username }}</td>
-        </ng-container>
-
-        <!-- email -->
-        <ng-container matColumnDef="email">
-          <th mat-header-cell *matHeaderCellDef>Email</th>
-          <td mat-cell *matCellDef="let user">{{ user.email }}</td>
-        </ng-container>
-
-        <!-- role -->
-        <ng-container matColumnDef="role">
-          <th mat-header-cell *matHeaderCellDef>Rol</th>
-          <td mat-cell *matCellDef="let user">
-            <mat-chip
-              [color]="user.role === 'ADMIN_DESIGNER' ? 'primary' : ''"
-              [highlighted]="user.role === 'ADMIN_DESIGNER'">
-              {{ user.role }}
-            </mat-chip>
-          </td>
-        </ng-container>
-
-        <!-- department -->
-        <ng-container matColumnDef="department">
-          <th mat-header-cell *matHeaderCellDef>Departamento</th>
-          <td mat-cell *matCellDef="let user">
-            @if (user.role === 'EMPLOYEE') {
-              <mat-select
-                [value]="user.departmentId ?? ''"
-                [disabled]="assigning() === user.id"
-                (selectionChange)="assignDepartment(user, $event.value)"
-                style="min-width:200px;">
-                <mat-option value="">Sin departamento</mat-option>
-                @for (dept of departments(); track dept.id) {
-                  <mat-option [value]="dept.id">{{ dept.name }}</mat-option>
-                }
-              </mat-select>
-            } @else {
-              <span style="color:var(--mat-sys-on-surface-variant); font-size:0.85rem;">
-                N/A — Administrador
-              </span>
-            }
-          </td>
-        </ng-container>
-
-        <!-- status -->
-        <ng-container matColumnDef="status">
-          <th mat-header-cell *matHeaderCellDef>Estado asignación</th>
-          <td mat-cell *matCellDef="let user">
-            @if (user.role === 'EMPLOYEE') {
-              @if (user.departmentId) {
-                <mat-chip color="primary" highlighted>
-                  <mat-icon>check_circle</mat-icon>
-                  {{ getDepartmentName(user.departmentId) }}
-                </mat-chip>
-              } @else {
-                <mat-chip color="warn">
-                  <mat-icon>warning</mat-icon>
-                  Sin asignar
-                </mat-chip>
+    <div class="page-body">
+      @if (!loading() && users().length === 0) {
+        <div class="card">
+          <div class="empty-state">
+            <mat-icon>group</mat-icon>
+            <p>No hay usuarios registrados</p>
+          </div>
+        </div>
+      } @else {
+        <div class="card">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Usuario</th>
+                <th>Email</th>
+                <th>Rol</th>
+                <th>Departamento</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (user of users(); track user.id) {
+                <tr>
+                  <td>
+                    <span style="font-weight:600; color:#0f172a;">{{ user.username }}</span>
+                  </td>
+                  <td style="color:#64748b; font-size:0.84rem;">{{ user.email }}</td>
+                  <td>
+                    @if (user.role === 'ADMIN_DESIGNER') {
+                      <span class="badge badge-dl">Admin</span>
+                    } @else if (user.role === 'CLIENT') {
+                      <span class="badge badge-active">Client</span>
+                    } @else {
+                      <span class="badge badge-draft">{{ user.role }}</span>
+                    }
+                  </td>
+                  <td>
+                    @if (user.role === 'EMPLOYEE') {
+                      <div class="select-wrapper">
+                        <mat-select
+                          [value]="user.departmentId ?? ''"
+                          [disabled]="assigning() === user.id"
+                          (selectionChange)="assignDepartment(user, $event.value)">
+                          <mat-option value="">Sin departamento</mat-option>
+                          @for (dept of departments(); track dept.id) {
+                            <mat-option [value]="dept.id">{{ dept.name }}</mat-option>
+                          }
+                        </mat-select>
+                      </div>
+                    } @else {
+                      <span style="color:#94a3b8; font-size:0.84rem;">—</span>
+                    }
+                  </td>
+                  <td>
+                    @if (user.role === 'EMPLOYEE') {
+                      @if (user.departmentId) {
+                        <span class="badge badge-active">
+                          {{ getDepartmentName(user.departmentId) }}
+                        </span>
+                      } @else {
+                        <span class="badge badge-warning">Sin asignar</span>
+                      }
+                    }
+                  </td>
+                </tr>
               }
-            }
-          </td>
-        </ng-container>
-
-        <tr mat-header-row *matHeaderRowDef="columns"></tr>
-        <tr mat-row *matRowDef="let row; columns: columns;"></tr>
-      </table>
-    }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
   `,
 })
 export class UsersComponent implements OnInit {

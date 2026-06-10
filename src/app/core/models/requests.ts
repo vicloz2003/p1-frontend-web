@@ -1,5 +1,15 @@
 import { ActivityNode, ActivityPartition, ControlFlow } from './domain';
 
+export interface DocumentRequirementRequest {
+  name: string;
+  description?: string;
+  allowedMimeTypes?: string[];
+  mandatory: boolean;
+  uploadStage: string;
+  uploaderRole: string;
+  maxSizeBytes?: number | null;
+}
+
 export interface AssignDepartmentRequest {
   departmentId: string;
 }

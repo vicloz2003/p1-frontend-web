@@ -1,0 +1,16 @@
+/* Active sidenav link highlight */
+.nav-active {
+  background: var(--mat-sys-primary-container) !important;
+  color: var(--mat-sys-on-primary-container) !important;
+  border-radius: 8px;
+  font-weight: 600;
+
+  mat-icon {
+    color: var(--mat-sys-primary);
+  }
+}
+
+/* Ensure sidenav container fills viewport */
+mat-sidenav-container {
+  height: 100vh;
+}

@@ -7,13 +7,9 @@ import {
 } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
-import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatTableModule } from '@angular/material/table';
-import { MatToolbarModule } from '@angular/material/toolbar';
 import { Department } from '../../core/models/domain';
 import { DepartmentDialogComponent } from './department-dialog/department-dialog.component';
 
@@ -21,57 +17,72 @@ import { DepartmentDialogComponent } from './department-dialog/department-dialog
   selector: 'app-departments',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    MatTableModule,
-    MatButtonModule,
     MatIconModule,
-    MatToolbarModule,
-    MatProgressBarModule,
     MatSnackBarModule,
     MatDialogModule,
   ],
   template: `
-    <mat-toolbar color="primary">
-      <span>Departamentos</span>
-      <span style="flex:1"></span>
-      <button mat-flat-button (click)="openCreateDialog()">
+    <!-- ── Page header ── -->
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Departamentos</h1>
+        <p class="page-subtitle">
+          {{ departments().length }} departamento{{ departments().length !== 1 ? 's' : '' }} registrado{{ departments().length !== 1 ? 's' : '' }}
+        </p>
+      </div>
+      <button class="btn btn-primary" (click)="openCreateDialog()">
         <mat-icon>add</mat-icon>
         Nuevo departamento
       </button>
-    </mat-toolbar>
+    </div>
 
+    <!-- ── Loading bar ── -->
     @if (loading()) {
-      <mat-progress-bar mode="indeterminate" />
+      <div style="height:3px; overflow:hidden; background:#eff6ff;">
+        <div class="loading-bar" style="height:100%;"></div>
+      </div>
     }
 
-    <mat-table [dataSource]="departments()" style="width:100%;">
-      <ng-container matColumnDef="name">
-        <mat-header-cell *matHeaderCellDef>Nombre</mat-header-cell>
-        <mat-cell *matCellDef="let dept">{{ dept.name }}</mat-cell>
-      </ng-container>
-
-      <ng-container matColumnDef="description">
-        <mat-header-cell *matHeaderCellDef>Descripción</mat-header-cell>
-        <mat-cell *matCellDef="let dept">{{ dept.description ?? '—' }}</mat-cell>
-      </ng-container>
-
-      <ng-container matColumnDef="actions">
-        <mat-header-cell *matHeaderCellDef>Acciones</mat-header-cell>
-        <mat-cell *matCellDef="let dept">
-          <button mat-icon-button (click)="openEditDialog(dept)">
-            <mat-icon>edit</mat-icon>
-          </button>
-        </mat-cell>
-      </ng-container>
-
-      <mat-header-row *matHeaderRowDef="displayedColumns" />
-      <mat-row *matRowDef="let row; columns: displayedColumns;" />
-    </mat-table>
-
-    @if (!loading() && departments().length === 0) {
-      <p style="text-align:center; margin-top:32px; color: var(--mat-sys-on-surface-variant);">
-        No hay departamentos registrados
-      </p>
-    }
+    <!-- ── Table card ── -->
+    <div class="page-body">
+      <div class="card">
+        @if (!loading() && departments().length === 0) {
+          <div class="empty-state">
+            <mat-icon>business</mat-icon>
+            <p>No hay departamentos registrados todavía</p>
+            <button class="btn btn-primary" (click)="openCreateDialog()">
+              <mat-icon>add</mat-icon>
+              Crear primer departamento
+            </button>
+          </div>
+        } @else {
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Descripción</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (dept of departments(); track dept.id) {
+                <tr>
+                  <td>
+                    <span style="font-weight:600; color:#0f172a;">{{ dept.name }}</span>
+                  </td>
+                  <td style="color:#64748b;">{{ dept.description ?? '—' }}</td>
+                  <td>
+                    <button class="btn-icon" (click)="openEditDialog(dept)">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+    </div>
   `,
 })
 export class DepartmentsComponent implements OnInit {
