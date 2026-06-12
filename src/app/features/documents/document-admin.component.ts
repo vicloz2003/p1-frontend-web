@@ -48,7 +48,8 @@ import { DocumentVersionsDialogComponent } from './document-versions-dialog.comp
                       style="width:100%; max-width:460px; margin-bottom:16px;">
         <mat-label>Buscar trámite por cliente, política o estado</mat-label>
         <mat-icon matPrefix>search</mat-icon>
-        <input matInput [(ngModel)]="search" placeholder="Escribe para filtrar…">
+        <input matInput [ngModel]="search()" (ngModelChange)="search.set($event)"
+               placeholder="Escribe para filtrar…">
       </mat-form-field>
 
       <!-- Lista de trámites -->
@@ -194,10 +195,10 @@ export class DocumentAdminComponent {
   readonly loading = signal(false);
   readonly loadingProcesses = signal(true);
   private readonly users = signal<Map<string, UserResponse>>(new Map());
-  search = '';
+  readonly search = signal('');
 
   readonly filtered = computed(() => {
-    const q = this.search.trim().toLowerCase();
+    const q = this.search().trim().toLowerCase();
     const list = this.processes();
     if (!q) return list;
     return list.filter(p =>
