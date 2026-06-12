@@ -32,6 +32,13 @@ export interface DocumentPermissions {
   canDelete: string[] | null;
 }
 
+export interface DocumentVersion {
+  versionId: string;
+  uploadedBy: string;
+  uploadedAt: string;
+  sizeBytes: number;
+}
+
 export interface DocumentResponse {
   id: string;
   processInstanceId: string | null;
@@ -46,6 +53,7 @@ export interface DocumentResponse {
   uploadedAt: string;
   confirmedAt: string | null;
   taskId: string | null;
+  versions: DocumentVersion[] | null;
 }
 
 export interface AuditLogResponse {

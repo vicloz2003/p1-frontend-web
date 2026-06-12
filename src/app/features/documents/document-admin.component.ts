@@ -19,6 +19,7 @@ import { DocumentResponse, ProcessStatusResponse, UserResponse } from '../../cor
 import { DocumentService } from '../../core/services/document.service';
 import { DocumentPermissionsDialogComponent } from './document-permissions-dialog.component';
 import { DocumentAuditDialogComponent } from './document-audit-dialog.component';
+import { DocumentVersionsDialogComponent } from './document-versions-dialog.component';
 
 @Component({
   selector: 'app-document-admin',
@@ -159,6 +160,10 @@ import { DocumentAuditDialogComponent } from './document-audit-dialog.component'
                       matTooltip="Descargar archivo">
                 <mat-icon>download</mat-icon> Descargar
               </button>
+              <button mat-stroked-button (click)="openVersions(doc)"
+                      matTooltip="Ver historial de versiones">
+                <mat-icon>history_edu</mat-icon> Versiones
+              </button>
               <button mat-stroked-button (click)="openAudit(doc)"
                       matTooltip="Ver bitácora de auditoría">
                 <mat-icon>history</mat-icon> Auditoría
@@ -282,5 +287,9 @@ export class DocumentAdminComponent {
 
   openAudit(doc: DocumentResponse): void {
     this.dialog.open(DocumentAuditDialogComponent, { data: doc, maxWidth: '640px' });
+  }
+
+  openVersions(doc: DocumentResponse): void {
+    this.dialog.open(DocumentVersionsDialogComponent, { data: doc, maxWidth: '600px' });
   }
 }

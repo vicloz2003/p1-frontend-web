@@ -61,6 +61,16 @@ export class DocumentService {
     );
   }
 
+  /** RF-07: presigned GET URL for a specific historical version of the document. */
+  downloadVersion(
+    documentId: string,
+    versionId: string
+  ): Observable<{ presignedUrl: string; fileName: string }> {
+    return this.http.get<{ presignedUrl: string; fileName: string }>(
+      `${this.API}/${documentId}/versions/${versionId}/download`
+    );
+  }
+
   /** RF-08: full audit trail of a document (ADMIN_DESIGNER). */
   getAudit(documentId: string): Observable<AuditLogResponse[]> {
     return this.http.get<AuditLogResponse[]>(`${this.API}/${documentId}/audit`);
