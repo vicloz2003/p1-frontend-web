@@ -36,6 +36,7 @@ const TYPE_ICON: Record<FormField['type'], string> = {
   NUMBER: 'pin',
   DATE: 'calendar_today',
   SELECT: 'list',
+  CHECKLIST: 'checklist',
   FILE: 'attach_file',
   SIGNATURE: 'draw',
   GRID: 'table_chart',
@@ -47,6 +48,7 @@ const TYPE_LABEL: Record<FormField['type'], string> = {
   NUMBER: 'Número',
   DATE: 'Fecha',
   SELECT: 'Lista',
+  CHECKLIST: 'Checklist',
   FILE: 'Archivo',
   SIGNATURE: 'Firma',
   GRID: 'Tabla/Grid',
@@ -402,7 +404,8 @@ export interface FormEditorDialogData {
 
                 <mat-checkbox formControlName="required">Requerido</mat-checkbox>
 
-                @if (editForm.get('type')!.value === 'SELECT') {
+                @if (editForm.get('type')!.value === 'SELECT'
+                     || editForm.get('type')!.value === 'CHECKLIST') {
                   <mat-form-field appearance="outline" style="width:100%;">
                     <mat-label>Opciones (separadas por coma)</mat-label>
                     <input matInput formControlName="options"
@@ -586,6 +589,23 @@ export interface FormEditorDialogData {
                       <mat-icon style="font-size:18px;width:18px;height:18px;">arrow_drop_down</mat-icon>
                     </div>
                   }
+                  @case ('CHECKLIST') {
+                    @if (field.options.length > 0) {
+                      <div style="display:flex;flex-direction:column;gap:4px;">
+                        @for (opt of field.options; track opt) {
+                          <span style="display:flex;align-items:center;gap:6px;
+                                       font-size:0.85rem;color:var(--mat-sys-on-surface-variant);">
+                            <mat-icon style="font-size:18px;width:18px;height:18px;">check_box_outline_blank</mat-icon>
+                            {{ opt }}
+                          </span>
+                        }
+                      </div>
+                    } @else {
+                      <div class="preview-input-mock" style="opacity:0.5;">
+                        Checklist sin opciones (agrégalas en el editor)
+                      </div>
+                    }
+                  }
                   @case ('FILE') {
                     <div class="preview-file-mock">
                       <mat-icon style="font-size:18px;width:18px;height:18px;">attach_file</mat-icon>
@@ -645,7 +665,7 @@ export class FormEditorDialogComponent implements OnInit, OnDestroy {
   private readonly templateSvc = inject(FormTemplateService);
 
   readonly fieldTypes: FormField['type'][] = [
-    'TEXT', 'TEXTAREA', 'NUMBER', 'DATE', 'SELECT', 'FILE', 'SIGNATURE', 'GRID',
+    'TEXT', 'TEXTAREA', 'NUMBER', 'DATE', 'SELECT', 'CHECKLIST', 'FILE', 'SIGNATURE', 'GRID',
   ];
 
   readonly fields = signal<FormField[]>(
@@ -691,7 +711,7 @@ export class FormEditorDialogComponent implements OnInit, OnDestroy {
           label: raw.label ?? f.label,
           type,
           required: raw.required ?? f.required,
-          options: type === 'SELECT'
+          options: (type === 'SELECT' || type === 'CHECKLIST')
             ? (raw.options ?? '').split(',').map((s: string) => s.trim()).filter(Boolean)
             : [],
         };

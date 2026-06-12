@@ -7,7 +7,7 @@ export interface GridColumn {
 
 export interface FormField {
   id: string;
-  type: 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'DATE' | 'SELECT' | 'FILE' | 'SIGNATURE' | 'GRID';
+  type: 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'DATE' | 'SELECT' | 'CHECKLIST' | 'FILE' | 'SIGNATURE' | 'GRID';
   label: string;
   required: boolean;
   options: string[];

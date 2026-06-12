@@ -9,6 +9,8 @@ import { FormlyModule } from '@ngx-formly/core';
 import { FormlyMaterialModule } from '@ngx-formly/material';
 import { FormlyMatDatepickerModule } from '@ngx-formly/material/datepicker';
 import { FileFieldComponent } from './features/dashboard/task-complete/file-field/file-field.component';
+import { ChecklistFieldComponent } from './features/dashboard/task-complete/checklist-field/checklist-field.component';
+import { GridFieldComponent } from './features/dashboard/task-complete/grid-field/grid-field.component';
 
 import { routes } from './app.routes';
 import { jwtInterceptor } from './core/http/jwt.interceptor';
@@ -28,6 +30,14 @@ export const appConfig: ApplicationConfig = {
           {
             name: 'file-upload',
             component: FileFieldComponent,
+          },
+          {
+            name: 'checklist',
+            component: ChecklistFieldComponent,
+          },
+          {
+            name: 'grid',
+            component: GridFieldComponent,
           },
         ],
         validationMessages: [

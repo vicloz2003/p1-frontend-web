@@ -511,6 +511,21 @@ export class TaskCompleteComponent implements OnInit {
               options: field.options.map(o => ({ label: o, value: o })),
             },
           };
+        case 'CHECKLIST':
+          return {
+            ...base,
+            type: 'checklist',
+            props: {
+              ...base.props,
+              options: field.options.map(o => ({ label: o, value: o })),
+            },
+          };
+        case 'GRID':
+          return {
+            ...base,
+            type: 'grid',
+            props: { ...base.props, columns: field.columns ?? [] },
+          };
         case 'FILE':
           return {
             ...base,
